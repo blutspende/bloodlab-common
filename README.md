@@ -26,7 +26,6 @@ func ConvertArrayFromUtf8ToEncoding(input []string, encoding encoding.Encoding) 
 ## Slices
 Contains utility functions for slices.
 ```go
-func SliceContains[V comparable](search V, data []V) bool
 func ConvertBytes2Dto1D(twoDim [][]byte) ([]byte, error)
 func ConvertBytes1Dto2D(oneDim []byte) [][]byte
 ```

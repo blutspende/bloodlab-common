@@ -1,20 +1,14 @@
 package util
 
-import "fmt"
-
-func SliceContains[V comparable](search V, data []V) bool {
-	for _, value := range data {
-		if value == search {
-			return true
-		}
-	}
-	return false
-}
+import (
+	"fmt"
+	"slices"
+)
 
 func ConvertBytes2Dto1D(twoDim [][]byte) ([]byte, error) {
 	result := []byte{}
 	for i, row := range twoDim {
-		if SliceContains('\u0000', row) {
+		if slices.Contains(row, '\u0000') {
 			return []byte{}, fmt.Errorf("message contains invalid characters")
 		}
 		if i > 0 {
