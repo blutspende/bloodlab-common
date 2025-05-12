@@ -28,4 +28,11 @@ Contains utility functions for slices.
 ```go
 func ConvertBytes2Dto1D(twoDim [][]byte) ([]byte, error)
 func ConvertBytes1Dto2D(oneDim []byte) [][]byte
+func JoinEnumsAsString[T ~string](enumList []T, separator string) string
+func Partition(totalLength int, partitionLength int, consumer func(low int, high int) error) error
+```
+## Misc
+Contains miscellaneous utility functions.
+```go
+func SqlNullStringToStringPointer(value sql.NullString) *string
 ```
