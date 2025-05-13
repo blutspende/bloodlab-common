@@ -31,8 +31,14 @@ func ConvertBytes1Dto2D(oneDim []byte) [][]byte
 func JoinEnumsAsString[T ~string](enumList []T, separator string) string
 func Partition(totalLength int, partitionLength int, consumer func(low int, high int) error) error
 ```
-## Misc
-Contains miscellaneous utility functions.
+## Types
+Contains type conversion utility functions. Converting between null, pointer and normal representations of string, UUID and time types.
 ```go
-func SqlNullStringToStringPointer(value sql.NullString) *string
+func StringPointerToString(value *string) string
+func StringPointerToStringWithDefault(value *string, defaultValue string) string
+func NullStringToString(value sql.NullString) string
+func NullStringToStringPointer(value sql.NullString) *string
+func NullUUIDToUUIDPointer(value uuid.NullUUID) *uuid.UUID
+func NullTimeToTimePointer(value sql.NullTime) *time.Time
+func TimePointerToNullTime(value *time.Time) sql.NullTime
 ```
