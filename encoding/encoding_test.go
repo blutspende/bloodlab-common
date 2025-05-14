@@ -1,4 +1,4 @@
-package util
+package encoding
 
 import (
 	"github.com/blutspende/bloodlab-common/enums/encoding"
