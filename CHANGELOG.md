@@ -5,10 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [1.0.0] - 2025-05-12
+## [1.0.0] - 2025-05-15
 
 ### Added
 - Base project
+- Enums and constants used in multiple libraries and services
+- Encoding utility functions
+- Timezone utility functions
+- MessageType and MessageStatus enums
+- Utils package with various utility functions
 
 ### Changed
 
