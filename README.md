@@ -4,6 +4,7 @@ Enums and constants used in multiple libraries and services
 `go get github.com/blutspende/bloodlab-common`
 
 # Encoding
+`github.com/blutspende/bloodlab-common/encoding`
 ## Enums
 Contains enum definitions used throughout bloodlab.
 
@@ -17,6 +18,7 @@ func ConvertArrayFromUtf8ToEncoding(input []string, encoding encoding.Encoding) 
 ```
 
 # Timezone
+`github.com/blutspende/bloodlab-common/timezone`
 ## Enums
 List of timezones. Can be used for `time.LoadLocation` locations.
 ## Functions
@@ -26,12 +28,15 @@ func GetLocation(timezone TimeZone) (*time.Location, error)
 ```
 
 # MessageType
+`github.com/blutspende/bloodlab-common/messagetype`
 List of message types. Used in drivers to identify and process messages.
 
 # MessageStatus
+`github.com/blutspende/bloodlab-common/messagsestatus`
 List of message statuses. Used in drivers to store and read states of messages.
 
 # Utils
+`github.com/blutspende/bloodlab-common/utils`
 Various utility functions used throughout bloodlab.
 ## Slices
 Contains utility functions for slices.
