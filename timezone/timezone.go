@@ -1,5 +1,15 @@
 package timezone
 
+import "time"
+
+func (t TimeZone) GetLocation() (*time.Location, error) {
+	location, err := time.LoadLocation(string(t))
+	if err != nil {
+		return nil, err
+	}
+	return location, nil
+}
+
 type TimeZone string
 
 const UTC TimeZone = "UTC"
