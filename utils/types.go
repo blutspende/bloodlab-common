@@ -6,6 +6,16 @@ import (
 	"time"
 )
 
+func StringToPointer(value string) *string {
+	return &value
+}
+func StringToPointerWithNil(value string) *string {
+	if value == "" {
+		return nil
+	}
+	return &value
+}
+
 func StringPointerToString(value *string) string {
 	if value != nil {
 		return *value

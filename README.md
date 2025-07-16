@@ -44,7 +44,8 @@ Various utility functions used throughout bloodlab.
 ## Slices
 Contains utility functions for slices.
 ```go
-func ConvertBytes2Dto1D(twoDim [][]byte) ([]byte, error)
+func ConvertBytes2Dto1D(twoDim [][]byte) []byte
+func ConvertBytes2Dto1DWithCheck(twoDim [][]byte) ([]byte, error)
 func ConvertBytes1Dto2D(oneDim []byte) [][]byte
 func JoinEnumsAsString[T ~string](enumList []T, separator string) string
 func Partition(totalLength int, partitionLength int, consumer func(low int, high int) error) error
@@ -53,6 +54,8 @@ func Partition(totalLength int, partitionLength int, consumer func(low int, high
 ## Types
 Contains type conversion utility functions. Converting between null, pointer and normal representations of string, UUID and time types.
 ```go
+func StringToPointer(value string) *string
+func StringToPointerWithNil(value string) *string
 func StringPointerToString(value *string) string
 func StringPointerToStringWithDefault(value *string, defaultValue string) string
 func NullStringToString(value sql.NullString) string
