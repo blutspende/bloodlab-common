@@ -1,38 +1,32 @@
 package utils
 
 import (
+	"bytes"
 	"fmt"
 	"slices"
 	"strings"
 )
 
-func ConvertBytes2Dto1D(twoDim [][]byte) ([]byte, error) {
+var byteSeparator = byte(0x0A) // ASCII Line Feed (LF) character
+
+func ConvertBytes2Dto1D(twoDim [][]byte) []byte {
+	return bytes.Join(twoDim, []byte{byteSeparator})
+}
+func ConvertBytes2Dto1DWithCheck(twoDim [][]byte) ([]byte, error) {
 	result := []byte{}
 	for i, row := range twoDim {
-		if slices.Contains(row, '\u0000') {
-			return []byte{}, fmt.Errorf("message contains invalid characters")
+		if slices.Contains(row, byteSeparator) {
+			return []byte{}, fmt.Errorf("2D byte array contains invalid separator character LF (0x0A)")
 		}
 		if i > 0 {
-			result = append(result, 0)
+			result = append(result, byteSeparator)
 		}
 		result = append(result, row...)
 	}
 	return result, nil
 }
-
 func ConvertBytes1Dto2D(oneDim []byte) [][]byte {
-	result := [][]byte{}
-	startByte := 0
-	for i := 0; i < len(oneDim); i++ {
-		if oneDim[i] == 0 {
-			result = append(result, oneDim[startByte:i])
-			startByte = i + 1
-		}
-	}
-	if startByte < len(oneDim) {
-		result = append(result, oneDim[startByte:])
-	}
-	return result
+	return bytes.Split(oneDim, []byte{byteSeparator})
 }
 
 func JoinEnumsAsString[T ~string](enumList []T, separator string) string {
