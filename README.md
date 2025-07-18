@@ -65,3 +65,9 @@ func NullUUIDToUUIDPointer(value uuid.NullUUID) *uuid.UUID
 func NullTimeToTimePointer(value sql.NullTime) *time.Time
 func TimePointerToNullTime(value *time.Time) sql.NullTime
 ```
+
+## Helpers
+Contains miscellaneous helper functions.
+```go
+func FormatTimeStringToBerlinTime(timeString, format string) time.Time
+```

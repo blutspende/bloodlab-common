@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 - UUID to NullUUID converter
+- Berlin time zone formatter helper
 
 ### Changed
 
