@@ -42,6 +42,13 @@ func NullStringToStringPointer(value sql.NullString) *string {
 	return nil
 }
 
+func UUIDToNullUUID(value uuid.UUID) uuid.NullUUID {
+	return uuid.NullUUID{
+		UUID:  value,
+		Valid: value != uuid.Nil,
+	}
+}
+
 func NullUUIDToUUIDPointer(value uuid.NullUUID) *uuid.UUID {
 	if value.Valid {
 		return &value.UUID
