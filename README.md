@@ -60,7 +60,14 @@ func StringPointerToString(value *string) string
 func StringPointerToStringWithDefault(value *string, defaultValue string) string
 func NullStringToString(value sql.NullString) string
 func NullStringToStringPointer(value sql.NullString) *string
+func UUIDToNullUUID(value uuid.UUID) uuid.NullUUID
 func NullUUIDToUUIDPointer(value uuid.NullUUID) *uuid.UUID
 func NullTimeToTimePointer(value sql.NullTime) *time.Time
 func TimePointerToNullTime(value *time.Time) sql.NullTime
+```
+
+## Helpers
+Contains miscellaneous helper functions.
+```go
+func FormatTimeStringToBerlinTime(timeString, format string) time.Time
 ```

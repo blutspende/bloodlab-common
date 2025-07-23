@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -65,4 +66,32 @@ func TestTypes_StringToPointerWithNil_Empty(t *testing.T) {
 	result := StringToPointerWithNil("")
 	// Assert
 	assert.Nil(t, result)
+}
+
+func TestTypes_UUIDToNullUUID(t *testing.T) {
+	// Arrange
+	input := uuid.MustParse("bfb292af-b806-4cbb-870b-b1f07e148df9")
+	// Act
+	result := UUIDToNullUUID(input)
+	// Assert
+	assert.True(t, result.Valid)
+	assert.Equal(t, input, result.UUID)
+}
+func TestTypes_UUIDToNullUUID_Nil(t *testing.T) {
+	// Arrange
+	input := uuid.Nil
+	// Act
+	result := UUIDToNullUUID(input)
+	// Assert
+	assert.False(t, result.Valid)
+	assert.Equal(t, input, result.UUID)
+}
+func TestTypes_UUIDToNullUUID_Empty(t *testing.T) {
+	// Arrange
+	input := uuid.UUID{}
+	// Act
+	result := UUIDToNullUUID(input)
+	// Assert
+	assert.False(t, result.Valid)
+	assert.Equal(t, input, result.UUID)
 }
