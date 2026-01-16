@@ -70,4 +70,5 @@ func TimePointerToNullTime(value *time.Time) sql.NullTime
 Contains miscellaneous helper functions.
 ```go
 func FormatTimeStringToBerlinTime(timeString, format string) time.Time
+func ParseBerlinTimeStringToUTCTime(timeString string) time.Time
 ```
