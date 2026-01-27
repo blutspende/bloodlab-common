@@ -79,9 +79,8 @@ func (c *dbConnection) ExecContext(ctx context.Context, query string, args ...in
 	}
 	if c.tx != nil {
 		return c.tx.ExecContext(ctx, query, args...)
-	} else {
-		return c.db.ExecContext(ctx, query, args...)
 	}
+	return c.db.ExecContext(ctx, query, args...)
 }
 
 func (c *dbConnection) Get(dest interface{}, query string, args ...interface{}) error {
