@@ -1,11 +1,13 @@
 package utils
 
 import (
+	"testing"
+
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
+// String
 const testString = "test"
 
 func TestTypes_StringToPointer(t *testing.T) {
@@ -37,7 +39,6 @@ func TestTypes_StringToPointer_Empty(t *testing.T) {
 	assert.NotNil(t, result)
 	assert.Equal(t, "", *result)
 }
-
 func TestTypes_StringToPointerWithNil(t *testing.T) {
 	// Arrange
 	input := "test"
@@ -68,6 +69,7 @@ func TestTypes_StringToPointerWithNil_Empty(t *testing.T) {
 	assert.Nil(t, result)
 }
 
+// UUID
 func TestTypes_UUIDToNullUUID(t *testing.T) {
 	// Arrange
 	input := uuid.MustParse("bfb292af-b806-4cbb-870b-b1f07e148df9")
@@ -94,4 +96,15 @@ func TestTypes_UUIDToNullUUID_Empty(t *testing.T) {
 	// Assert
 	assert.False(t, result.Valid)
 	assert.Equal(t, input, result.UUID)
+}
+
+// Int
+func TestTypes_IntToPointer(t *testing.T) {
+	// Arrange
+	input := 1
+	// Act
+	result := IntToPointer(input)
+	// Assert
+	assert.NotNil(t, result)
+	assert.Equal(t, 1, *result)
 }

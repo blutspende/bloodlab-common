@@ -87,7 +87,11 @@ func (p *postgres) GetSqlConnection() (*sqlx.DB, error) {
 
 func (p *postgres) Close() error {
 	if p.pgConn != nil {
-		return p.pgConn.Close()
+		err := p.pgConn.Close()
+		if err != nil {
+			log.Error().Err(err).Msg("failed to close postgres connection")
+			return err
+		}
 	}
 	return nil
 }
