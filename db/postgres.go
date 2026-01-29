@@ -7,6 +7,8 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/rs/zerolog/log"
+	"go.nhat.io/otelsql"
+	semconv "go.opentelemetry.io/otel/semconv/v1.38.0"
 )
 
 type PgConfig struct {
@@ -21,6 +23,7 @@ type PgConfig struct {
 	MaxIdleConnections           *int
 	ConnectionMaxLifetimeSeconds *int
 	ConnectionMaxIdleTimeSeconds *int
+	UseOpenTelemetry             bool
 }
 
 type Postgres interface {
@@ -41,18 +44,39 @@ func NewPostgres(config PgConfig) Postgres {
 	}
 }
 
-func (p *postgres) Connect(ctx context.Context) (*sqlx.DB, error) {
+func (p *postgres) Connect(ctx context.Context) (pgDB *sqlx.DB, err error) {
+	// Skip if already connected
 	if p.pgConn != nil {
-		err := p.pgConn.Ping()
+		err = p.pgConn.Ping()
 		if err == nil {
 			log.Warn().Msg("postgres already connected")
 			return p.pgConn, nil
 		}
 	}
+	// Setup connection parameters
 	url := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s application_name=%s",
 		p.config.Host, p.config.Port, p.config.User,
 		p.config.Pass, p.config.Database, p.config.SSLMode, p.config.ApplicationName)
-	pgDB, err := sqlx.ConnectContext(ctx, "pgx", url)
+	driverName := "pgx"
+	// Setup OpenTelemetry if enabled
+	if p.config.UseOpenTelemetry {
+		driverName, err = otelsql.Register(driverName,
+			otelsql.AllowRoot(),
+			otelsql.TraceQueryWithoutArgs(),
+			otelsql.TraceRowsClose(),
+			otelsql.TraceRowsAffected(),
+			otelsql.WithDatabaseName(p.config.Database),
+			otelsql.WithSystem(semconv.DBSystemNamePostgreSQL),
+		)
+		if err != nil {
+			log.Error().Err(err).Msg("open telemetry setup failed")
+			return nil, err
+		}
+		// Note: must be explicitly specified, because otelsql changes the driver name, which breaks sqlx parameter binding in named queries
+		sqlx.BindDriver(driverName, sqlx.DOLLAR)
+	}
+	// Connect to Postgres
+	pgDB, err = sqlx.ConnectContext(ctx, driverName, url)
 	if err != nil {
 		log.Error().Err(err).Msg("postgres connection failed")
 		return nil, err
@@ -62,6 +86,7 @@ func (p *postgres) Connect(ctx context.Context) (*sqlx.DB, error) {
 		return nil, err
 	}
 	p.pgConn = pgDB
+	// Configure connection pool
 	if p.config.MaxOpenConnections != nil {
 		pgDB.DB.SetMaxOpenConns(*p.config.MaxOpenConnections)
 	}
@@ -74,6 +99,7 @@ func (p *postgres) Connect(ctx context.Context) (*sqlx.DB, error) {
 	if p.config.ConnectionMaxIdleTimeSeconds != nil {
 		pgDB.DB.SetConnMaxIdleTime(time.Duration(*p.config.ConnectionMaxIdleTimeSeconds) * time.Second)
 	}
+	// Log successful connection and return
 	log.Info().Msgf("postgres available, connected to %s / %s", p.config.Host, p.config.Database)
 	return p.pgConn, nil
 }
