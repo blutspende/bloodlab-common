@@ -10,16 +10,14 @@ import (
 const (
 	DuplicateKeyErrorCode        = pq.ErrorCode("23505")
 	ForeignKeyViolationErrorCode = pq.ErrorCode("23503")
-
-	MsgBeginTransactionTransactionFailed    = "begin transaction failed"
-	MsgCommitTransactionTransactionFailed   = "commit transaction failed"
-	MsgRollbackTransactionTransactionFailed = "revert transaction failed"
 )
 
 var (
-	ErrBeginTransactionTransactionFailed    = errors.New(MsgBeginTransactionTransactionFailed)
-	ErrCommitTransactionTransactionFailed   = errors.New(MsgCommitTransactionTransactionFailed)
-	ErrRollbackTransactionTransactionFailed = errors.New(MsgRollbackTransactionTransactionFailed)
+	ErrBeginTransactionTransactionFailed    = errors.New("begin transaction failed")
+	ErrCommitTransactionTransactionFailed   = errors.New("commit transaction failed")
+	ErrRollbackTransactionTransactionFailed = errors.New("revert transaction failed")
+	ErrCommitWithoutTransaction             = errors.New("invalid transaction, can not perform commit without transaction")
+	ErrRollbackWithoutTransaction           = errors.New("invalid transaction, can not perform rollback without transaction")
 )
 
 func IsErrorCode(err error, errcode pq.ErrorCode) bool {

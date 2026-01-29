@@ -3,7 +3,6 @@ package db
 import (
 	"context"
 	"database/sql"
-	"errors"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/rs/zerolog/log"
@@ -55,7 +54,7 @@ func (c *dbConnection) SetSqlConnection(db *sqlx.DB) {
 func (c *dbConnection) CreateTransactionConnection() (DbConnection, error) {
 	tx, err := c.db.Beginx()
 	if err != nil {
-		log.Error().Err(err).Msg(MsgBeginTransactionTransactionFailed)
+		log.Error().Err(err).Msg(ErrBeginTransactionTransactionFailed.Error())
 		return nil, ErrBeginTransactionTransactionFailed
 	}
 	connCopy := *c
@@ -75,7 +74,7 @@ func (c *dbConnection) Exec(query string, args ...interface{}) (sql.Result, erro
 
 func (c *dbConnection) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
 	if c.debugLogEnabled {
-		log.Debug().Str("query", query).Interface("args", args).Msg("ExecContext query")
+		log.Debug().Ctx(ctx).Str("query", query).Interface("args", args).Msg("ExecContext query")
 	}
 	if c.tx != nil {
 		return c.tx.ExecContext(ctx, query, args...)
@@ -95,7 +94,7 @@ func (c *dbConnection) Get(dest interface{}, query string, args ...interface{}) 
 
 func (c *dbConnection) GetContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error {
 	if c.debugLogEnabled {
-		log.Debug().Str("query", query).Interface("args", args).Msg("GetContext query")
+		log.Debug().Ctx(ctx).Str("query", query).Interface("args", args).Msg("GetContext query")
 	}
 	if c.tx != nil {
 		return c.tx.GetContext(ctx, dest, query, args...)
@@ -115,7 +114,7 @@ func (c *dbConnection) NamedExec(query string, arg interface{}) (sql.Result, err
 
 func (c *dbConnection) NamedExecContext(ctx context.Context, query string, arg interface{}) (sql.Result, error) {
 	if c.debugLogEnabled {
-		log.Debug().Str("query", query).Interface("arg", arg).Msg("NamedExecContext query")
+		log.Debug().Ctx(ctx).Str("query", query).Interface("arg", arg).Msg("NamedExecContext query")
 	}
 	if c.tx != nil {
 		return c.tx.NamedExecContext(ctx, query, arg)
@@ -135,7 +134,7 @@ func (c *dbConnection) NamedQuery(query string, arg interface{}) (*sqlx.Rows, er
 
 func (c *dbConnection) NamedQueryContext(ctx context.Context, query string, arg interface{}) (*sqlx.Rows, error) {
 	if c.debugLogEnabled {
-		log.Debug().Str("query", query).Interface("args", arg).Msg("NamedQueryContext query")
+		log.Debug().Ctx(ctx).Str("query", query).Interface("args", arg).Msg("NamedQueryContext query")
 	}
 	if c.tx != nil {
 		return c.tx.NamedQuery(query, arg)
@@ -155,7 +154,7 @@ func (c *dbConnection) Queryx(query string, args ...interface{}) (*sqlx.Rows, er
 
 func (c *dbConnection) QueryxContext(ctx context.Context, query string, args ...interface{}) (*sqlx.Rows, error) {
 	if c.debugLogEnabled {
-		log.Debug().Str("query", query).Interface("args", args).Msg("QueryxContext query")
+		log.Debug().Ctx(ctx).Str("query", query).Interface("args", args).Msg("QueryxContext query")
 	}
 	if c.tx != nil {
 		return c.tx.QueryxContext(ctx, query, args...)
@@ -175,7 +174,7 @@ func (c *dbConnection) QueryRowx(query string, args ...interface{}) *sqlx.Row {
 
 func (c *dbConnection) QueryRowxContext(ctx context.Context, query string, args ...interface{}) *sqlx.Row {
 	if c.debugLogEnabled {
-		log.Debug().Str("query", query).Interface("args", args).Msg("QueryRowxContext query")
+		log.Debug().Ctx(ctx).Str("query", query).Interface("args", args).Msg("QueryRowxContext query")
 	}
 	if c.tx != nil {
 		return c.tx.QueryRowxContext(ctx, query, args...)
@@ -203,12 +202,12 @@ func (c *dbConnection) Commit() error {
 	}
 	if c.tx == nil {
 		// TODO: decide to return error or nil
-		return errors.New("invalid transaction, can not perform commit without transaction")
+		return ErrCommitWithoutTransaction
 	}
 	err := c.tx.Commit()
 	c.tx = nil
 	if err != nil {
-		log.Error().Err(err).Msg(MsgCommitTransactionTransactionFailed)
+		log.Error().Err(err).Msg(ErrCommitTransactionTransactionFailed.Error())
 		return ErrCommitTransactionTransactionFailed
 	}
 	return nil
@@ -220,12 +219,12 @@ func (c *dbConnection) Rollback() error {
 	}
 	if c.tx == nil {
 		// TODO: decide to return error or nil
-		return errors.New("invalid transaction, can not perform rollback without transaction")
+		return ErrRollbackWithoutTransaction
 	}
 	err := c.tx.Rollback()
 	c.tx = nil
 	if err != nil {
-		log.Error().Err(err).Msg(MsgRollbackTransactionTransactionFailed)
+		log.Error().Err(err).Msg(ErrRollbackTransactionTransactionFailed.Error())
 		return ErrRollbackTransactionTransactionFailed
 	}
 	return nil
