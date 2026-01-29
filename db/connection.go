@@ -11,6 +11,11 @@ import (
 type DbConnection interface {
 	SetSqlConnection(db *sqlx.DB)
 	CreateTransactionConnection() (DbConnection, error)
+	Ping() error
+	Commit() error
+	Rollback() error
+	Rebind(query string) string
+	PrepareNamed(query string) (*sqlx.NamedStmt, error)
 	Exec(query string, args ...interface{}) (sql.Result, error)
 	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 	Get(dest interface{}, query string, args ...interface{}) error
@@ -23,11 +28,6 @@ type DbConnection interface {
 	QueryxContext(ctx context.Context, query string, args ...interface{}) (*sqlx.Rows, error)
 	QueryRowx(query string, args ...interface{}) *sqlx.Row
 	QueryRowxContext(ctx context.Context, query string, args ...interface{}) *sqlx.Row
-	PrepareNamed(query string) (*sqlx.NamedStmt, error)
-	Rebind(query string) string
-	Commit() error
-	Rollback() error
-	Ping() error
 }
 
 type dbConnection struct {
@@ -36,11 +36,11 @@ type dbConnection struct {
 	debugLogEnabled bool
 }
 
-func NewDbConnection() DbConnection {
+func NewEmptyDbConnection() DbConnection {
 	return &dbConnection{}
 }
 
-func CreateDbConnector(db *sqlx.DB, enableQueryLogging bool) DbConnection {
+func NewDbConnection(db *sqlx.DB, enableQueryLogging bool) DbConnection {
 	return &dbConnection{
 		db:              db,
 		debugLogEnabled: enableQueryLogging,
@@ -60,6 +60,58 @@ func (c *dbConnection) CreateTransactionConnection() (DbConnection, error) {
 	connCopy := *c
 	connCopy.tx = tx
 	return &connCopy, err
+}
+
+func (c *dbConnection) Ping() error {
+	return c.db.Ping()
+}
+
+func (c *dbConnection) Commit() error {
+	if c.debugLogEnabled {
+		log.Debug().Msg("commit transaction")
+	}
+	if c.tx == nil {
+		// TODO: decide to return error or nil
+		return ErrCommitWithoutTransaction
+	}
+	err := c.tx.Commit()
+	c.tx = nil
+	if err != nil {
+		log.Error().Err(err).Msg(ErrCommitTransactionTransactionFailed.Error())
+		return ErrCommitTransactionTransactionFailed
+	}
+	return nil
+}
+
+func (c *dbConnection) Rollback() error {
+	if c.debugLogEnabled {
+		log.Debug().Msg("rollback transaction")
+	}
+	if c.tx == nil {
+		// TODO: decide to return error or nil
+		return ErrRollbackWithoutTransaction
+	}
+	err := c.tx.Rollback()
+	c.tx = nil
+	if err != nil {
+		log.Error().Err(err).Msg(ErrRollbackTransactionTransactionFailed.Error())
+		return ErrRollbackTransactionTransactionFailed
+	}
+	return nil
+}
+
+func (c *dbConnection) Rebind(query string) string {
+	if c.tx != nil {
+		return c.tx.Rebind(query)
+	}
+	return c.db.Rebind(query)
+}
+
+func (c *dbConnection) PrepareNamed(query string) (*sqlx.NamedStmt, error) {
+	if c.tx != nil {
+		return c.tx.PrepareNamed(query)
+	}
+	return c.db.PrepareNamed(query)
 }
 
 func (c *dbConnection) Exec(query string, args ...interface{}) (sql.Result, error) {
@@ -180,56 +232,4 @@ func (c *dbConnection) QueryRowxContext(ctx context.Context, query string, args 
 		return c.tx.QueryRowxContext(ctx, query, args...)
 	}
 	return c.db.QueryRowxContext(ctx, query, args...)
-}
-
-func (c *dbConnection) PrepareNamed(query string) (*sqlx.NamedStmt, error) {
-	if c.tx != nil {
-		return c.tx.PrepareNamed(query)
-	}
-	return c.db.PrepareNamed(query)
-}
-
-func (c *dbConnection) Rebind(query string) string {
-	if c.tx != nil {
-		return c.tx.Rebind(query)
-	}
-	return c.db.Rebind(query)
-}
-
-func (c *dbConnection) Commit() error {
-	if c.debugLogEnabled {
-		log.Debug().Msg("commit transaction")
-	}
-	if c.tx == nil {
-		// TODO: decide to return error or nil
-		return ErrCommitWithoutTransaction
-	}
-	err := c.tx.Commit()
-	c.tx = nil
-	if err != nil {
-		log.Error().Err(err).Msg(ErrCommitTransactionTransactionFailed.Error())
-		return ErrCommitTransactionTransactionFailed
-	}
-	return nil
-}
-
-func (c *dbConnection) Rollback() error {
-	if c.debugLogEnabled {
-		log.Debug().Msg("rollback transaction")
-	}
-	if c.tx == nil {
-		// TODO: decide to return error or nil
-		return ErrRollbackWithoutTransaction
-	}
-	err := c.tx.Rollback()
-	c.tx = nil
-	if err != nil {
-		log.Error().Err(err).Msg(ErrRollbackTransactionTransactionFailed.Error())
-		return ErrRollbackTransactionTransactionFailed
-	}
-	return nil
-}
-
-func (c *dbConnection) Ping() error {
-	return c.db.Ping()
 }
