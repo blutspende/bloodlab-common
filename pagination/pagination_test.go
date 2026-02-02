@@ -61,3 +61,15 @@ func TestPagination_StandardisePagination_BigPageSize(t *testing.T) {
 	assert.Equal(t, MaxSafeInt, result.PageSize)
 	assert.Equal(t, 0, result.Page)
 }
+func TestPagination_StandardisePagination_ZeroSize(t *testing.T) {
+	// Arrange
+	input := Pagination{
+		PageSize: 0,
+		Page:     0,
+	}
+	// Act
+	result := StandardisePagination(input)
+	// Assert
+	assert.Equal(t, 0, result.PageSize)
+	assert.Equal(t, 0, result.Page)
+}

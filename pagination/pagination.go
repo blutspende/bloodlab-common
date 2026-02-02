@@ -45,15 +45,18 @@ func NewPaginationDTO(pageSize, page, totalCount int) PaginationDTO {
 
 const MaxSafeInt = 9007199254740991
 
-var ValidPageSizes = []int{25, 50, 100}
+var StandardPageSizes = []int{25, 50, 100}
+var ValidPageSizes = []int{0, 25, 50, 100, MaxSafeInt}
 
 func StandardisePagination(page Pagination) Pagination {
 	if page.Page < 0 {
 		page.Page = 0
 	}
-	if page.PageSize > 100 {
+	if page.PageSize < 0 {
+		page.PageSize = 0
+	} else if page.PageSize > 100 {
 		page.PageSize = MaxSafeInt
-	} else if page.PageSize != 25 && page.PageSize != 50 && page.PageSize != 100 {
+	} else if page.PageSize != 0 && page.PageSize != 25 && page.PageSize != 50 && page.PageSize != 100 {
 		page.PageSize = 25
 	}
 	return page
