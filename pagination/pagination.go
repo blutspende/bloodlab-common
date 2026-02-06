@@ -1,25 +1,31 @@
 package pagination
 
-type Pagination struct {
-	PageSize  int    `form:"pageSize" json:"pageSize" example:"25"`
-	Page      int    `form:"page" json:"page" example:"1"`
+type PaginatedQuery struct {
+	PageSize  int    `form:"pageSize" json:"pageSize" minimum:"0" default:"25" example:"25"`
+	Page      int    `form:"page" json:"page" minimum:"0" default:"0" example:"1"`
 	Direction string `form:"direction" json:"direction" example:"ascending"`
 	Sort      string `form:"sort" json:"sort" example:"code"`
 }
-
-type PaginationDTO struct {
-	PageSize   int `json:"pageSize" example:"25"`
-	Page       int `json:"currentPage" example:"1"`
-	TotalCount int `json:"totalCount" example:"40"`
-	TotalPages int `json:"totalPages" example:"2"`
-}
-
 type FilteredPaginatedQuery struct {
-	Pagination
+	PaginatedQuery
 	SearchTerm *string `form:"search" json:"search" example:"PLASMA"`
 }
 
+type PaginatedResponse struct {
+	PageSize    int `json:"pageSize" example:"25"`
+	CurrentPage int `json:"currentPage" example:"1"`
+	TotalCount  int `json:"totalCount" example:"40"`
+	TotalPages  int `json:"totalPages" example:"2"`
+}
+
 // Helper functions
+
+func (p PaginatedQuery) IsPaged() bool {
+	return p.PageSize > 0
+}
+func (p PaginatedQuery) IsUnPaged() bool {
+	return p.PageSize == 0
+}
 
 func TotalPages(totalCount, pageSize int) int {
 	totalPages := 1
@@ -31,13 +37,12 @@ func TotalPages(totalCount, pageSize int) int {
 	}
 	return totalPages
 }
-
-func NewPaginationDTO(pageSize, page, totalCount int) PaginationDTO {
-	return PaginationDTO{
-		PageSize:   pageSize,
-		Page:       page,
-		TotalCount: totalCount,
-		TotalPages: TotalPages(totalCount, pageSize),
+func NewPaginatedResponse(pageSize, currentPage, totalCount int) PaginatedResponse {
+	return PaginatedResponse{
+		PageSize:    pageSize,
+		CurrentPage: currentPage,
+		TotalCount:  totalCount,
+		TotalPages:  TotalPages(totalCount, pageSize),
 	}
 }
 
@@ -48,7 +53,7 @@ const MaxSafeInt = 9007199254740991
 var StandardPageSizes = []int{25, 50, 100}
 var ValidPageSizes = []int{0, 25, 50, 100, MaxSafeInt}
 
-func StandardisePagination(page Pagination) Pagination {
+func StandardisePaginatedQuery(page PaginatedQuery) PaginatedQuery {
 	if page.Page < 0 {
 		page.Page = 0
 	}

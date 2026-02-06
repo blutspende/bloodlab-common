@@ -22,8 +22,9 @@ type RedisCache interface {
 	// Initialization
 	Init(config RedisCacheConfig, refreshFillerFunc func(ctx context.Context) error, refreshInitFunc func(ctx context.Context) error)
 	// Refreshing and validity
-	IsValid() bool
-	Invalidate()
+	IsValid(ctx context.Context) bool
+	SetToInvalid(ctx context.Context)
+	SetToValid(ctx context.Context)
 	RefreshCacheAsync(ctx context.Context, forceUpdate bool)
 	// CRUD
 	Store(ctx context.Context, key string, content interface{}) error
@@ -49,8 +50,8 @@ type RedisCache interface {
 	// Key handling
 	KeyForAll() string
 	KeyForOne(id uuid.UUID) string
-	KeyForPage(page pagination.Pagination) string
-	KeyForCustomPage(page pagination.Pagination, customKey string) string
+	KeyForPage(page pagination.PaginatedQuery) string
+	KeyForCustomPage(page pagination.PaginatedQuery, customKey string) string
 	KeyForCustom(customKey string) string
 	KeyForValuedCustom(name string, values ...string) string
 	KeyForNotFound() string
@@ -85,10 +86,13 @@ func NewRedisCache(redisClient *redis.Client, name string) RedisCache {
 }
 
 // Constants and errors
+const (
+	MsgItemNotFound = "item not found in cache"
+)
 
 var (
 	ErrCacheInvalid          = errors.New("cache is invalid")
-	ErrItemNotFound          = errors.New("item not found in cache")
+	ErrItemNotFound          = errors.New(MsgItemNotFound)
 	ErrNoSuchIndexFound      = errors.New("no such index found in cache")
 	ErrConfigNotSet          = errors.New("configuration not initialized")
 	ErrExpirationNotSet      = errors.New("no default expiration set and no specific expiration provided")
@@ -121,66 +125,66 @@ func (c *redisCache) Init(config RedisCacheConfig, refreshFillerFunc func(ctx co
 
 // Refreshing and validity
 
-func (c *redisCache) IsValid() bool {
+func (c *redisCache) IsValid(ctx context.Context) bool {
 	if c.config != nil && c.config.MultiserverMode {
-		valid, err := c.GetFlag(context.Background(), c.keyForSystem(cacheValidFlagKey))
+		valid, err := c.GetFlag(ctx, c.keyForSystem(cacheValidFlagKey))
 		if err != nil {
-			log.Error().Err(err).Msg(c.fmtMsg("checking validity failed"))
+			log.Error().Ctx(ctx).Err(err).Msg(c.fmtMsg("checking validity failed"))
 			return false
 		}
 		return valid
 	}
 	return c.cacheValid
 }
-func (c *redisCache) Invalidate() {
+func (c *redisCache) SetToInvalid(ctx context.Context) {
 	if c.config != nil && c.config.MultiserverMode {
-		err := c.DeleteFlag(context.Background(), c.keyForSystem(cacheValidFlagKey))
+		err := c.DeleteFlag(ctx, c.keyForSystem(cacheValidFlagKey))
 		if err != nil {
-			log.Error().Err(err).Msg(c.fmtMsg("invalidating failed"))
+			log.Error().Ctx(ctx).Err(err).Msg(c.fmtMsg("setting to invalid failed"))
 		}
 	} else {
 		c.cacheValid = false
 	}
 }
-func (c *redisCache) validate() {
+func (c *redisCache) SetToValid(ctx context.Context) {
 	if c.config != nil && c.config.MultiserverMode {
-		err := c.SetFlag(context.Background(), c.keyForSystem(cacheValidFlagKey))
+		err := c.SetFlag(ctx, c.keyForSystem(cacheValidFlagKey))
 		if err != nil {
-			log.Error().Err(err).Msg(c.fmtMsg("validating failed"))
+			log.Error().Ctx(ctx).Err(err).Msg(c.fmtMsg("setting to valid failed"))
 		}
 	} else {
 		c.cacheValid = true
 	}
 }
 
-func (c *redisCache) mutexTryLock() bool {
+func (c *redisCache) mutexTryLock(ctx context.Context) bool {
 	if c.config != nil && c.config.MultiserverMode {
-		locked, err := c.GetFlag(context.Background(), c.keyForSystem(mutexLockFlagKey))
+		locked, err := c.GetFlag(ctx, c.keyForSystem(mutexLockFlagKey))
 		if err != nil {
-			log.Error().Err(err).Msg(c.fmtMsg("getting mutex flag failed"))
+			log.Error().Ctx(ctx).Err(err).Msg(c.fmtMsg("getting mutex flag failed"))
 			return false
 		}
 		if locked {
 			return false
 		}
 		if c.config.MutexExpiration == nil {
-			log.Error().Err(c.fmtErr(ErrMutexExpirationNotSet)).Send()
+			log.Error().Ctx(ctx).Err(c.fmtErr(ErrMutexExpirationNotSet)).Send()
 			return false
 		}
-		err = c.SetFlagWithExpiration(context.Background(), c.keyForSystem(mutexLockFlagKey), c.config.MutexExpiration)
+		err = c.SetFlagWithExpiration(ctx, c.keyForSystem(mutexLockFlagKey), c.config.MutexExpiration)
 		if err != nil {
-			log.Error().Err(err).Msg(c.fmtMsg("setting mutex flag failed"))
+			log.Error().Ctx(ctx).Err(err).Msg(c.fmtMsg("setting mutex flag failed"))
 			return false
 		}
 		return true
 	}
 	return c.refreshMutex.TryLock()
 }
-func (c *redisCache) mutexUnlock() {
+func (c *redisCache) mutexUnlock(ctx context.Context) {
 	if c.config != nil && c.config.MultiserverMode {
-		err := c.DeleteFlag(context.Background(), c.keyForSystem(mutexLockFlagKey))
+		err := c.DeleteFlag(ctx, c.keyForSystem(mutexLockFlagKey))
 		if err != nil {
-			log.Error().Err(err).Msg(c.fmtMsg("unlocking mutex flag failed"))
+			log.Error().Ctx(ctx).Err(err).Msg(c.fmtMsg("unlocking mutex flag failed"))
 		}
 	} else {
 		c.refreshMutex.Unlock()
@@ -189,57 +193,57 @@ func (c *redisCache) mutexUnlock() {
 
 func (c *redisCache) RefreshCacheAsync(ctx context.Context, forceUpdate bool) {
 	if c.config == nil {
-		log.Error().Err(c.fmtErr(ErrConfigNotSet)).Send()
+		log.Error().Ctx(ctx).Err(c.fmtErr(ErrConfigNotSet)).Send()
 		return
 	}
-	if !c.mutexTryLock() {
+	if !c.mutexTryLock(ctx) {
 		if forceUpdate {
 			c.forceUpdateRequested = true
-			log.Info().Msg(c.fmtMsg("refresh already running, but force update requested"))
+			log.Info().Ctx(ctx).Msg(c.fmtMsg("refresh already running, but force update requested"))
 		} else {
-			log.Info().Msg(c.fmtMsg("refresh already running, skipping new request"))
+			log.Info().Ctx(ctx).Msg(c.fmtMsg("refresh already running, skipping new request"))
 		}
 		return
 	}
 	go func() {
 		defer func() {
-			c.mutexUnlock()
+			c.mutexUnlock(ctx)
 			if c.forceUpdateRequested {
-				log.Info().Msg(c.fmtMsg("processing forced re-refresh request"))
+				log.Info().Ctx(ctx).Msg(c.fmtMsg("processing forced re-refresh request"))
 				c.forceUpdateRequested = false
 				go c.RefreshCacheAsync(ctx, false)
 			}
 		}()
 		err := c.retry(c.config.RefreshRetryAttempts, (time.Duration)(c.config.RefreshRetryWaitStartMs)*time.Millisecond, (float64)(c.config.RefreshRetryWaitExponent), func() error {
-			c.Invalidate()
+			c.SetToInvalid(ctx)
 			err := c.clearCache(ctx)
 			if err != nil {
-				log.Warn().Err(err).Msg(c.fmtMsg("refresh clear cache failed"))
+				log.Warn().Ctx(ctx).Err(err).Msg(c.fmtMsg("refresh clear cache failed"))
 				return err
 			}
 			if c.refreshInitFunc != nil {
 				err = c.refreshInitFunc(ctx)
 				if err != nil {
-					log.Warn().Err(err).Msg(c.fmtMsg("refresh init function failed"))
+					log.Warn().Ctx(ctx).Err(err).Msg(c.fmtMsg("refresh init function failed"))
 					return err
 				}
 			}
 			if c.refreshFillerFunc != nil {
 				err = c.refreshFillerFunc(ctx)
 				if err != nil {
-					log.Warn().Err(err).Msg(c.fmtMsg("refresh refill cache function failed"))
+					log.Warn().Ctx(ctx).Err(err).Msg(c.fmtMsg("refresh refill cache function failed"))
 					return err
 				}
 			} else {
-				log.Error().Msg(c.fmtMsg("refresh called with no filler function provided"))
+				log.Error().Ctx(ctx).Msg(c.fmtMsg("refresh called with no filler function provided"))
 			}
-			c.validate()
+			c.SetToValid(ctx)
 			return nil
 		})
 		if err != nil {
-			log.Error().Err(err).Msg(c.fmtMsg("refresh failed"))
+			log.Error().Ctx(ctx).Err(err).Msg(c.fmtMsg("refresh failed"))
 		} else {
-			log.Info().Msg(c.fmtMsg("refresh succeeded"))
+			log.Info().Ctx(ctx).Msg(c.fmtMsg("refresh succeeded"))
 		}
 	}()
 	return
@@ -272,7 +276,7 @@ func (c *redisCache) clearCache(ctx context.Context) error {
 		var err error
 		keys, cursor, err = c.redisClient.Scan(ctx, cursor, prefix, 50).Result()
 		if err != nil {
-			log.Error().Interface("prefix", prefix).Msg(c.fmtMsg("deleting all existing keys by prefix failed"))
+			log.Error().Ctx(ctx).Interface("prefix", prefix).Msg(c.fmtMsg("deleting all existing keys by prefix failed"))
 			return err
 		}
 		c.redisClient.Del(ctx, keys...)
@@ -290,7 +294,7 @@ func (c *redisCache) Store(ctx context.Context, key string, content interface{})
 }
 func (c *redisCache) StoreWithExpiration(ctx context.Context, key string, content interface{}, expirationTime *time.Duration) error {
 	if c.config == nil {
-		log.Error().Err(c.fmtErr(ErrConfigNotSet)).Send()
+		log.Error().Ctx(ctx).Err(c.fmtErr(ErrConfigNotSet)).Send()
 		return ErrConfigNotSet
 	}
 	expiration := c.config.DefaultExpiration
@@ -298,7 +302,7 @@ func (c *redisCache) StoreWithExpiration(ctx context.Context, key string, conten
 		expiration = expirationTime
 	}
 	if expiration == nil {
-		log.Error().Err(c.fmtErr(ErrExpirationNotSet)).Send()
+		log.Error().Ctx(ctx).Err(c.fmtErr(ErrExpirationNotSet)).Send()
 		return ErrExpirationNotSet
 	}
 	pipeline := c.redisClient.Pipeline()
@@ -312,7 +316,7 @@ func (c *redisCache) Read(ctx context.Context, key string, modelPtr interface{})
 }
 func (c *redisCache) ReadWithExpiration(ctx context.Context, key string, modelPtr interface{}, expirationTime *time.Duration) error {
 	if c.config == nil {
-		log.Error().Err(c.fmtErr(ErrConfigNotSet)).Send()
+		log.Error().Ctx(ctx).Err(c.fmtErr(ErrConfigNotSet)).Send()
 		return ErrConfigNotSet
 	}
 	expiration := c.config.DefaultExpiration
@@ -320,14 +324,14 @@ func (c *redisCache) ReadWithExpiration(ctx context.Context, key string, modelPt
 		expiration = expirationTime
 	}
 	if expiration == nil {
-		log.Error().Err(c.fmtErr(ErrExpirationNotSet)).Send()
+		log.Error().Ctx(ctx).Err(c.fmtErr(ErrExpirationNotSet)).Send()
 		return ErrExpirationNotSet
 	}
 	return c.read(ctx, key, modelPtr, expiration)
 }
 func (c *redisCache) read(ctx context.Context, key string, modelPtr interface{}, expirationTime *time.Duration) error {
 	// Check cache validity
-	if !c.IsValid() {
+	if !c.IsValid(ctx) {
 		return ErrCacheInvalid
 	}
 	var redisResult string
@@ -340,13 +344,21 @@ func (c *redisCache) read(ctx context.Context, key string, modelPtr interface{},
 		jsonGet := pipeline.JSONGet(ctx, key)
 		_, err = pipeline.Exec(ctx)
 		if err != nil {
-			log.Error().Err(err).Msg(c.fmtMsg("failed to execute pipeline"))
+			if errors.Is(err, redis.Nil) {
+				return ErrItemNotFound
+			}
+			log.Error().Ctx(ctx).Err(err).Interface("key", key).Msg(c.fmtMsg("failed to execute pipeline"))
 			return err
 		}
 		var expiration time.Duration
 		expiration, err = ttl.Result()
-		if expiration != -1 && expiration != -2 {
-			_ = c.redisClient.Expire(ctx, key, *expirationTime).Err()
+		if err != nil || (expiration == -1 || expiration == -2) {
+			log.Warn().Ctx(ctx).Err(err).Interface("key", key).Msg(c.fmtMsg("failed to get expiration"))
+		} else {
+			err = c.redisClient.Expire(ctx, key, *expirationTime).Err()
+			if err != nil {
+				log.Warn().Ctx(ctx).Err(err).Interface("key", key).Msg(c.fmtMsg("failed to update expiration"))
+			}
 		}
 		redisResult, err = jsonGet.Result()
 	}
@@ -354,19 +366,19 @@ func (c *redisCache) read(ctx context.Context, key string, modelPtr interface{},
 		if errors.Is(err, redis.Nil) {
 			return ErrItemNotFound
 		}
-		log.Warn().Err(err).Interface("key", key).Msg(c.fmtMsg("getting json failed"))
+		log.Warn().Ctx(ctx).Err(err).Interface("key", key).Msg(c.fmtMsg("getting json failed"))
 		return err
 	}
 	err = json.Unmarshal([]byte(redisResult), modelPtr)
 	if err != nil {
-		log.Error().Err(err).Interface("key", key).Msg(c.fmtMsg("unmarshal failed"))
+		log.Error().Ctx(ctx).Err(err).Interface("key", key).Msg(c.fmtMsg("unmarshal failed"))
 		return err
 	}
 	return nil
 }
 func (c *redisCache) ReadGroup(ctx context.Context, keys []string, modelArrayPtr interface{}) error {
 	// Check cache validity
-	if !c.IsValid() {
+	if !c.IsValid(ctx) {
 		return ErrCacheInvalid
 	}
 	// Read multiple keys from Redis directly
@@ -375,29 +387,33 @@ func (c *redisCache) ReadGroup(ctx context.Context, keys []string, modelArrayPtr
 		if errors.Is(err, redis.Nil) {
 			return ErrItemNotFound
 		}
-		log.Warn().Err(err).Msg(c.fmtMsg("getting json failed"))
+		log.Warn().Ctx(ctx).Err(err).Msg(c.fmtMsg("getting json failed"))
 		return err
 	}
 	// Handle reflection to allow any model type
 	v := reflect.ValueOf(modelArrayPtr)
 	if v.Kind() != reflect.Ptr {
 		err = fmt.Errorf("modelArrayPtr must be a pointer")
-		log.Error().Err(c.fmtErr(err)).Send()
+		log.Error().Ctx(ctx).Err(c.fmtErr(err)).Send()
 		return err
 	}
 	v = v.Elem()
 	if v.Kind() != reflect.Slice {
 		err = fmt.Errorf("modelArrayPtr must be a slice")
-		log.Error().Err(c.fmtErr(err)).Send()
+		log.Error().Ctx(ctx).Err(c.fmtErr(err)).Send()
 		return err
 	}
 	elemType := v.Type().Elem()
 	// Unmarshal each element and append to the slice
 	for i := range redisResult {
 		newElem := reflect.New(elemType)
+		if redisResult[i] == nil {
+			log.Debug().Ctx(ctx).Interface("key", keys[i]).Msg(MsgItemNotFound)
+			continue
+		}
 		err = json.Unmarshal([]byte(redisResult[i].(string)), newElem.Interface())
 		if err != nil {
-			log.Error().Err(err).Msg(c.fmtMsg("unmarshal failed"))
+			log.Error().Ctx(ctx).Err(err).Interface("key", keys[i]).Msg(c.fmtMsg("unmarshal failed"))
 			return err
 		}
 		v.Set(reflect.Append(v, newElem.Elem()))
@@ -453,22 +469,22 @@ func (c *redisCache) SearchInIndex(ctx context.Context, indexName string, queryS
 	redisResult, err := c.redisClient.FTSearchWithArgs(ctx, indexName, queryString, options).Result()
 	if err != nil {
 		if strings.Contains(err.Error(), "No such index") {
-			log.Error().Err(err).Interface("index", indexName).Msg(c.fmtErr(ErrNoSuchIndexFound).Error())
+			log.Error().Ctx(ctx).Err(err).Interface("index", indexName).Msg(c.fmtErr(ErrNoSuchIndexFound).Error())
 			return 0, ErrNoSuchIndexFound
 		}
-		log.Error().Err(err).Msg(c.fmtMsg("searching in index failed"))
+		log.Error().Ctx(ctx).Err(err).Msg(c.fmtMsg("searching in index failed"))
 		return 0, err
 	}
 	v := reflect.ValueOf(modelArrayPtr)
 	if v.Kind() != reflect.Ptr {
 		err = fmt.Errorf("modelArrayPtr must be a pointer")
-		log.Error().Err(c.fmtErr(err)).Send()
+		log.Error().Ctx(ctx).Err(c.fmtErr(err)).Send()
 		return 0, err
 	}
 	v = v.Elem()
 	if v.Kind() != reflect.Slice {
 		err = fmt.Errorf("modelArrayPtr must be a slice")
-		log.Error().Err(c.fmtErr(err)).Send()
+		log.Error().Ctx(ctx).Err(c.fmtErr(err)).Send()
 		return 0, err
 	}
 	elemType := v.Type().Elem()
@@ -476,7 +492,7 @@ func (c *redisCache) SearchInIndex(ctx context.Context, indexName string, queryS
 	for i := range redisResult.Docs {
 		newElem := reflect.New(elemType)
 		if err = json.Unmarshal([]byte(redisResult.Docs[i].Fields["$"]), newElem.Interface()); err != nil {
-			log.Error().Err(err).Msg(c.fmtMsg("unmarshal failed"))
+			log.Error().Ctx(ctx).Err(err).Msg(c.fmtMsg("unmarshal failed"))
 			return 0, err
 		}
 		v.Set(reflect.Append(v, newElem.Elem()))
@@ -484,7 +500,7 @@ func (c *redisCache) SearchInIndex(ctx context.Context, indexName string, queryS
 	var indexInfo redis.FTInfoResult
 	indexInfo, err = c.redisClient.FTInfo(ctx, indexName).Result()
 	if err != nil {
-		log.Error().Err(err).Msg(c.fmtMsg("getting index info failed"))
+		log.Error().Ctx(ctx).Err(err).Msg(c.fmtMsg("getting index info failed"))
 		return 0, err
 	}
 	return indexInfo.NumDocs, nil
@@ -501,10 +517,10 @@ func (c *redisCache) KeyForAll() string {
 func (c *redisCache) KeyForOne(id uuid.UUID) string {
 	return fmt.Sprintf("%s:ONE:%s", c.name, c.GuidToString(id))
 }
-func (c *redisCache) KeyForPage(page pagination.Pagination) string {
+func (c *redisCache) KeyForPage(page pagination.PaginatedQuery) string {
 	return fmt.Sprintf("%s:PAGE:%d|%d|%s|%s", c.name, page.PageSize, page.Page, page.Direction, page.Sort)
 }
-func (c *redisCache) KeyForCustomPage(page pagination.Pagination, customKey string) string {
+func (c *redisCache) KeyForCustomPage(page pagination.PaginatedQuery, customKey string) string {
 	return fmt.Sprintf("%s:%s", c.KeyForPage(page), customKey)
 }
 func (c *redisCache) KeyForCustom(customKey string) string {

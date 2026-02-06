@@ -43,7 +43,7 @@ Refresh parameters are used to configure the retry policy for the refresh mechan
 `MutexExpiration` is used to set the expiration time for mutex locks used in multiserver mode, to avoid permanently locked states if an instance crashes while holding a lock.
 
 ### Refreshing and validity
-Cache has an internally stored validity state, which can be checked with `IsValid` method. If the cache is invalid, it should be refreshed with `RefreshCacheAsync` method, it is not done automatically, but calling any read operation will result in error. The cache can be actively invalidated with `Invalidate` method.
+Cache has an internally stored validity state, which can be checked with `IsValid` method. If the cache is invalid, it should be refreshed with `RefreshCacheAsync` method, it is not done automatically, but calling any read operation will result in error. The cache can be actively invalidated with `SetToInvalid` method, or manually set to valid (without calling `RefreshCacheAsync`) with `SetToValid` method if needed.
 ```go
 func RefreshCacheAsync(ctx context.Context, forceUpdate bool)
 ```
@@ -151,9 +151,9 @@ List of message types. Used in drivers to identify and process messages.
 # Pagination
 `github.com/blutspende/bloodlab-common/pagination`
 
-Contains pagination related structs and helpers.
+Contains pagination related structs, helpers and constants.
 `TotalPages` should always be used to calculate total pages based on total items and page size to make sure consistent behavior.
-`StandardisePagination` should be used to standardize pagination values. It makes sure that page size is one of the allowed sizes, and page number is not negative.
+`StandardisePaginatedQuery` should be used to standardize pagination values. It makes sure that page size is one of the allowed sizes, and page number is not negative. `StandardPageSizes` and `ValidPageSizes` can also be used for validation.
 
 # Timezone
 `github.com/blutspende/bloodlab-common/timezone`
