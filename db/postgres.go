@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	_ "github.com/jackc/pgx/v4/stdlib" /* Postgres driver with "pgx" driver name */
 	"github.com/jmoiron/sqlx"
 	"github.com/rs/zerolog/log"
 	"go.nhat.io/otelsql"
@@ -78,11 +79,11 @@ func (p *postgres) Connect(ctx context.Context) (pgDB *sqlx.DB, err error) {
 	// Connect to Postgres
 	pgDB, err = sqlx.ConnectContext(ctx, driverName, url)
 	if err != nil {
-		log.Error().Err(err).Msg("postgres connection failed")
+		log.Error().Err(err).Msg("connecting to postgres failed")
 		return nil, err
 	}
 	if pgDB == nil {
-		log.Error().Msg("postgres connection failed")
+		log.Error().Msg("connecting to postgres failed")
 		return nil, err
 	}
 	p.pgConn = pgDB
@@ -106,7 +107,7 @@ func (p *postgres) Connect(ctx context.Context) (pgDB *sqlx.DB, err error) {
 
 func (p *postgres) GetSqlConnection() (*sqlx.DB, error) {
 	if p.pgConn == nil {
-		return nil, fmt.Errorf("postgres connection is not established")
+		return nil, ErrNoPgConnection
 	}
 	return p.pgConn, nil
 }
@@ -118,6 +119,8 @@ func (p *postgres) Close() error {
 			log.Error().Err(err).Msg("failed to close postgres connection")
 			return err
 		}
+		p.pgConn = nil
+		log.Info().Msg("postgres connection closed")
 	}
 	return nil
 }

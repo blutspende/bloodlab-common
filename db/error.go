@@ -18,6 +18,7 @@ var (
 	ErrRollbackTransactionTransactionFailed = errors.New("revert transaction failed")
 	ErrCommitWithoutTransaction             = errors.New("invalid transaction, can not perform commit without transaction")
 	ErrRollbackWithoutTransaction           = errors.New("invalid transaction, can not perform rollback without transaction")
+	ErrNoPgConnection                       = errors.New("postgres connection is not established")
 )
 
 func IsErrorCode(err error, errcode pq.ErrorCode) bool {
