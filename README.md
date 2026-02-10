@@ -138,6 +138,11 @@ func ConvertFromUtf8ToEncoding(input string, encoding encoding.Encoding) (output
 func ConvertArrayFromUtf8ToEncoding(input []string, encoding encoding.Encoding) (output [][]byte, err error) 
 ```
 
+# Instrument
+`github.com/blutspende/bloodlab-common/instrument`
+
+Contains common enums related to Instruments.
+
 # MessageStatus
 `github.com/blutspende/bloodlab-common/messagsestatus`
 
