@@ -10,6 +10,7 @@ import (
 
 type DbConnection interface {
 	SetSqlConnection(db *sqlx.DB)
+	EnableQueryLogging()
 	CreateTransactionConnection() (DbConnection, error)
 	Ping() error
 	Commit() error
@@ -39,16 +40,19 @@ type dbConnection struct {
 func NewEmptyDbConnection() DbConnection {
 	return &dbConnection{}
 }
-
-func NewDbConnection(db *sqlx.DB, enableQueryLogging bool) DbConnection {
+func NewDbConnection(db *sqlx.DB) DbConnection {
 	return &dbConnection{
 		db:              db,
-		debugLogEnabled: enableQueryLogging,
+		tx:              nil,
+		debugLogEnabled: false,
 	}
 }
 
 func (c *dbConnection) SetSqlConnection(db *sqlx.DB) {
 	c.db = db
+}
+func (c *dbConnection) EnableQueryLogging() {
+	c.debugLogEnabled = true
 }
 
 func (c *dbConnection) CreateTransactionConnection() (DbConnection, error) {
@@ -88,7 +92,6 @@ func (c *dbConnection) Rollback() error {
 		log.Debug().Msg("rollback transaction")
 	}
 	if c.tx == nil {
-		// TODO: decide to return error or nil
 		return ErrRollbackWithoutTransaction
 	}
 	err := c.tx.Rollback()

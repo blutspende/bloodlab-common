@@ -13,6 +13,11 @@ func TestPostgresConnection(t *testing.T) {
 	embPg := embeddedpostgres.NewDatabase(embeddedpostgres.DefaultConfig().Port(5551))
 	err := embPg.Start()
 	assert.Nil(t, err)
+	// Defer stopping embedded Postgres
+	defer func() {
+		err = embPg.Stop()
+		assert.Nil(t, err)
+	}()
 
 	// Create Postgres instance
 	dbConfig := PgConfig{
@@ -54,8 +59,4 @@ func TestPostgresConnection(t *testing.T) {
 	dbConn, err = pg.GetSqlConnection()
 	assert.Nil(t, dbConn)
 	assert.ErrorIs(t, err, ErrNoPgConnection)
-
-	// Stop embedded Postgres
-	err = embPg.Stop()
-	assert.Nil(t, err)
 }
