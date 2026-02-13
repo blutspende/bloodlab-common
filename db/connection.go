@@ -32,9 +32,10 @@ type DbConnection interface {
 }
 
 type dbConnection struct {
-	db              *sqlx.DB
-	tx              *sqlx.Tx
-	debugLogEnabled bool
+	db                *sqlx.DB
+	tx                *sqlx.Tx
+	debugLogEnabled   bool
+	enforceTxValidity bool
 }
 
 func NewEmptyDbConnection() DbConnection {
@@ -42,9 +43,10 @@ func NewEmptyDbConnection() DbConnection {
 }
 func NewDbConnection(db *sqlx.DB) DbConnection {
 	return &dbConnection{
-		db:              db,
-		tx:              nil,
-		debugLogEnabled: false,
+		db:                db,
+		tx:                nil,
+		debugLogEnabled:   false,
+		enforceTxValidity: false,
 	}
 }
 
@@ -53,6 +55,9 @@ func (c *dbConnection) SetSqlConnection(db *sqlx.DB) {
 }
 func (c *dbConnection) EnableQueryLogging() {
 	c.debugLogEnabled = true
+}
+func (c *dbConnection) EnableTransactionValidityCheck() {
+	c.enforceTxValidity = true
 }
 
 func (c *dbConnection) CreateTransactionConnection() (DbConnection, error) {
@@ -75,8 +80,10 @@ func (c *dbConnection) Commit() error {
 		log.Debug().Msg("commit transaction")
 	}
 	if c.tx == nil {
-		// TODO: decide to return error or nil
-		return ErrCommitWithoutTransaction
+		if c.enforceTxValidity {
+			return ErrCommitWithoutTransaction
+		}
+		return nil
 	}
 	err := c.tx.Commit()
 	c.tx = nil
@@ -92,7 +99,10 @@ func (c *dbConnection) Rollback() error {
 		log.Debug().Msg("rollback transaction")
 	}
 	if c.tx == nil {
-		return ErrRollbackWithoutTransaction
+		if c.enforceTxValidity {
+			return ErrRollbackWithoutTransaction
+		}
+		return nil
 	}
 	err := c.tx.Rollback()
 	c.tx = nil
