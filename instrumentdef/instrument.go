@@ -1,4 +1,4 @@
-package instrument
+package instrumentdef
 
 type InstrumentType string
 
@@ -59,4 +59,12 @@ const (
 	MessageTypeRetransmitResult      ReprocessMessageType = "RETRANSMIT_RESULT"
 	MessageTypeReprocessBySampleCode ReprocessMessageType = "REPROCESS_BY_SAMPLE_CODE"
 	MessageTypeReprocessByDEAIds     ReprocessMessageType = "REPROCESS_BY_DEA_IDS"
+)
+
+type FileServerType string
+
+const (
+	FTP    FileServerType = "FTP"
+	SFTP   FileServerType = "SFTP"
+	WEBDAV FileServerType = "WEBDAV"
 )
