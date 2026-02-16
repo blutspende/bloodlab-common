@@ -4,29 +4,47 @@ import (
 	"context"
 	"testing"
 
-	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/testcontainers/testcontainers-go"
+	tcpg "github.com/testcontainers/testcontainers-go/modules/postgres"
 )
 
 func TestPostgresConnection(t *testing.T) {
-	// Setup embedded Postgres
-	embPg := embeddedpostgres.NewDatabase(embeddedpostgres.DefaultConfig().Port(5551))
-	err := embPg.Start()
+	// General setup
+	var err error
+	ctx := context.Background()
+
+	// Setup test container
+	dbName := "test"
+	dbUser := "user"
+	dbPass := "pass"
+	postgresContainer, err := tcpg.Run(ctx,
+		"postgres:16-alpine",
+		tcpg.WithDatabase(dbName),
+		tcpg.WithUsername(dbUser),
+		tcpg.WithPassword(dbPass),
+		tcpg.BasicWaitStrategies(),
+	)
 	assert.Nil(t, err)
-	// Defer stopping embedded Postgres
 	defer func() {
-		err = embPg.Stop()
+		err = testcontainers.TerminateContainer(postgresContainer)
 		assert.Nil(t, err)
 	}()
 
-	// Create Postgres instance
+	// Setup postgres instance
+	connStr, err := postgresContainer.ConnectionString(ctx)
+	assert.Nil(t, err)
+	log.Info().Str("connStr", connStr).Send()
+	dbPort, err := postgresContainer.MappedPort(ctx, "5432")
+	assert.Nil(t, err)
 	dbConfig := PgConfig{
 		ApplicationName: "test",
 		Host:            "localhost",
-		Port:            5551,
-		User:            "postgres",
-		Pass:            "postgres",
-		Database:        "postgres",
+		Port:            (uint32)(dbPort.Int()),
+		User:            dbUser,
+		Pass:            dbPass,
+		Database:        dbName,
 		SSLMode:         "disable",
 	}
 	pg := NewPostgres(dbConfig)
