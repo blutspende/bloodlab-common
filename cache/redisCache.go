@@ -86,6 +86,7 @@ func NewRedisCache(redisClient *redis.Client, name string) RedisCache {
 }
 
 // Constants and errors
+
 const (
 	MsgItemNotFound = "item not found in cache"
 )
@@ -97,6 +98,7 @@ var (
 	ErrConfigNotSet          = errors.New("configuration not initialized")
 	ErrExpirationNotSet      = errors.New("no default expiration set and no specific expiration provided")
 	ErrMutexExpirationNotSet = errors.New("no mutex expiration set for multiserver mode")
+	ErrNoClientSet           = errors.New("no redis client set in cache")
 )
 
 var (
@@ -192,6 +194,10 @@ func (c *redisCache) mutexUnlock(ctx context.Context) {
 }
 
 func (c *redisCache) RefreshCacheAsync(ctx context.Context, forceUpdate bool) {
+	if c.redisClient == nil {
+		log.Error().Ctx(ctx).Err(c.fmtErr(ErrNoClientSet)).Send()
+		return
+	}
 	if c.config == nil {
 		log.Error().Ctx(ctx).Err(c.fmtErr(ErrConfigNotSet)).Send()
 		return
@@ -257,7 +263,6 @@ func (c *redisCache) retry(attempts int, sleep time.Duration, exponent float64, 
 		if err == nil {
 			return nil
 		}
-		// exponential backoff with jitter
 		backoff := time.Duration(math.Pow(exponent, float64(i))) * sleep
 		jitter := time.Duration(c.rnd.Int63n(int64(sleep)))
 		wait := backoff + jitter
@@ -290,9 +295,17 @@ func (c *redisCache) clearCache(ctx context.Context) error {
 // CRUD
 
 func (c *redisCache) Store(ctx context.Context, key string, content interface{}) error {
+	if c.redisClient == nil {
+		log.Error().Ctx(ctx).Err(c.fmtErr(ErrNoClientSet)).Send()
+		return ErrNoClientSet
+	}
 	return c.redisClient.JSONSet(ctx, key, "$", content).Err()
 }
 func (c *redisCache) StoreWithExpiration(ctx context.Context, key string, content interface{}, expirationTime *time.Duration) error {
+	if c.redisClient == nil {
+		log.Error().Ctx(ctx).Err(c.fmtErr(ErrNoClientSet)).Send()
+		return ErrNoClientSet
+	}
 	if c.config == nil {
 		log.Error().Ctx(ctx).Err(c.fmtErr(ErrConfigNotSet)).Send()
 		return ErrConfigNotSet
@@ -330,7 +343,10 @@ func (c *redisCache) ReadWithExpiration(ctx context.Context, key string, modelPt
 	return c.read(ctx, key, modelPtr, expiration)
 }
 func (c *redisCache) read(ctx context.Context, key string, modelPtr interface{}, expirationTime *time.Duration) error {
-	// Check cache validity
+	if c.redisClient == nil {
+		log.Error().Ctx(ctx).Err(c.fmtErr(ErrNoClientSet)).Send()
+		return ErrNoClientSet
+	}
 	if !c.IsValid(ctx) {
 		return ErrCacheInvalid
 	}
@@ -377,11 +393,13 @@ func (c *redisCache) read(ctx context.Context, key string, modelPtr interface{},
 	return nil
 }
 func (c *redisCache) ReadGroup(ctx context.Context, keys []string, modelArrayPtr interface{}) error {
-	// Check cache validity
+	if c.redisClient == nil {
+		log.Error().Ctx(ctx).Err(c.fmtErr(ErrNoClientSet)).Send()
+		return ErrNoClientSet
+	}
 	if !c.IsValid(ctx) {
 		return ErrCacheInvalid
 	}
-	// Read multiple keys from Redis directly
 	redisResult, err := c.redisClient.JSONMGet(ctx, "$", keys...).Result()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
@@ -390,7 +408,6 @@ func (c *redisCache) ReadGroup(ctx context.Context, keys []string, modelArrayPtr
 		log.Warn().Ctx(ctx).Err(err).Msg(c.fmtMsg("getting json failed"))
 		return err
 	}
-	// Handle reflection to allow any model type
 	v := reflect.ValueOf(modelArrayPtr)
 	if v.Kind() != reflect.Ptr {
 		err = fmt.Errorf("modelArrayPtr must be a pointer")
@@ -404,7 +421,6 @@ func (c *redisCache) ReadGroup(ctx context.Context, keys []string, modelArrayPtr
 		return err
 	}
 	elemType := v.Type().Elem()
-	// Unmarshal each element and append to the slice
 	for i := range redisResult {
 		newElem := reflect.New(elemType)
 		if redisResult[i] == nil {
@@ -418,34 +434,61 @@ func (c *redisCache) ReadGroup(ctx context.Context, keys []string, modelArrayPtr
 		}
 		v.Set(reflect.Append(v, newElem.Elem()))
 	}
-	// Return success
 	return nil
 }
 func (c *redisCache) Delete(ctx context.Context, key string) error {
+	if c.redisClient == nil {
+		log.Error().Ctx(ctx).Err(c.fmtErr(ErrNoClientSet)).Send()
+		return ErrNoClientSet
+	}
 	return c.redisClient.Del(ctx, key).Err()
 }
 
 // Set handling
 
 func (c *redisCache) AddItemToSet(ctx context.Context, key string, item string) error {
+	if c.redisClient == nil {
+		log.Error().Ctx(ctx).Err(c.fmtErr(ErrNoClientSet)).Send()
+		return ErrNoClientSet
+	}
 	return c.redisClient.SAdd(ctx, key, item).Err()
 }
 func (c *redisCache) IsItemInSet(ctx context.Context, key string, item string) (bool, error) {
+	if c.redisClient == nil {
+		log.Error().Ctx(ctx).Err(c.fmtErr(ErrNoClientSet)).Send()
+		return false, ErrNoClientSet
+	}
 	return c.redisClient.SIsMember(ctx, key, item).Result()
 }
 func (c *redisCache) GetItemsInSetAsMap(ctx context.Context, key string) (map[string]struct{}, error) {
+	if c.redisClient == nil {
+		log.Error().Ctx(ctx).Err(c.fmtErr(ErrNoClientSet)).Send()
+		return nil, ErrNoClientSet
+	}
 	return c.redisClient.SMembersMap(ctx, key).Result()
 }
 func (c *redisCache) DeleteItemFromSet(ctx context.Context, key string, item string) error {
+	if c.redisClient == nil {
+		log.Error().Ctx(ctx).Err(c.fmtErr(ErrNoClientSet)).Send()
+		return ErrNoClientSet
+	}
 	return c.redisClient.SRem(ctx, key, item).Err()
 }
 
 // Flag handling
 
 func (c *redisCache) SetFlag(ctx context.Context, key string) error {
+	if c.redisClient == nil {
+		log.Error().Ctx(ctx).Err(c.fmtErr(ErrNoClientSet)).Send()
+		return ErrNoClientSet
+	}
 	return c.redisClient.Set(ctx, key, "", 0).Err()
 }
 func (c *redisCache) SetFlagWithExpiration(ctx context.Context, key string, expirationTime *time.Duration) error {
+	if c.redisClient == nil {
+		log.Error().Ctx(ctx).Err(c.fmtErr(ErrNoClientSet)).Send()
+		return ErrNoClientSet
+	}
 	expiration := c.config.DefaultExpiration
 	if expirationTime != nil {
 		expiration = expirationTime
@@ -453,19 +496,35 @@ func (c *redisCache) SetFlagWithExpiration(ctx context.Context, key string, expi
 	return c.redisClient.Set(ctx, key, "", *expiration).Err()
 }
 func (c *redisCache) GetFlag(ctx context.Context, key string) (bool, error) {
+	if c.redisClient == nil {
+		log.Error().Ctx(ctx).Err(c.fmtErr(ErrNoClientSet)).Send()
+		return false, ErrNoClientSet
+	}
 	count, err := c.redisClient.Exists(ctx, key).Result()
 	return count > 0, err
 }
 func (c *redisCache) DeleteFlag(ctx context.Context, key string) error {
+	if c.redisClient == nil {
+		log.Error().Ctx(ctx).Err(c.fmtErr(ErrNoClientSet)).Send()
+		return ErrNoClientSet
+	}
 	return c.redisClient.Del(ctx, key).Err()
 }
 
 // Index handling
 
 func (c *redisCache) CreateIndex(ctx context.Context, index string, options *redis.FTCreateOptions, fieldSchemas []*redis.FieldSchema) (string, error) {
+	if c.redisClient == nil {
+		log.Error().Ctx(ctx).Err(c.fmtErr(ErrNoClientSet)).Send()
+		return "", ErrNoClientSet
+	}
 	return c.redisClient.FTCreate(ctx, index, options, fieldSchemas...).Result()
 }
 func (c *redisCache) SearchInIndex(ctx context.Context, indexName string, queryString string, options *redis.FTSearchOptions, modelArrayPtr interface{}) (totalCount int, err error) {
+	if c.redisClient == nil {
+		log.Error().Ctx(ctx).Err(c.fmtErr(ErrNoClientSet)).Send()
+		return 0, ErrNoClientSet
+	}
 	redisResult, err := c.redisClient.FTSearchWithArgs(ctx, indexName, queryString, options).Result()
 	if err != nil {
 		if strings.Contains(err.Error(), "No such index") {
@@ -488,7 +547,6 @@ func (c *redisCache) SearchInIndex(ctx context.Context, indexName string, queryS
 		return 0, err
 	}
 	elemType := v.Type().Elem()
-	// Unmarshal each element and append to the slice
 	for i := range redisResult.Docs {
 		newElem := reflect.New(elemType)
 		if err = json.Unmarshal([]byte(redisResult.Docs[i].Fields["$"]), newElem.Interface()); err != nil {
@@ -506,6 +564,10 @@ func (c *redisCache) SearchInIndex(ctx context.Context, indexName string, queryS
 	return indexInfo.NumDocs, nil
 }
 func (c *redisCache) DeleteIndex(ctx context.Context, index string, deleteDocuments bool) error {
+	if c.redisClient == nil {
+		log.Error().Ctx(ctx).Err(c.fmtErr(ErrNoClientSet)).Send()
+		return ErrNoClientSet
+	}
 	return c.redisClient.FTDropIndexWithArgs(ctx, index, &redis.FTDropIndexOptions{DeleteDocs: deleteDocuments}).Err()
 }
 
