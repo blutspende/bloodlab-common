@@ -11,24 +11,19 @@ import (
 type DbConnection interface {
 	SetSqlConnection(db *sqlx.DB)
 	EnableQueryLogging()
-	CreateTransactionConnection() (DbConnection, error)
+	EnableTransactionValidityCheck()
 	Ping() error
+	BeginTx() (DbConnection, error)
 	Commit() error
 	Rollback() error
 	Rebind(query string) string
 	PrepareNamed(query string) (*sqlx.NamedStmt, error)
-	Exec(query string, args ...interface{}) (sql.Result, error)
-	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
-	Get(dest interface{}, query string, args ...interface{}) error
-	GetContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
-	NamedExec(query string, arg interface{}) (sql.Result, error)
-	NamedQuery(query string, arg interface{}) (*sqlx.Rows, error)
-	NamedQueryContext(ctx context.Context, query string, arg interface{}) (*sqlx.Rows, error)
-	NamedExecContext(ctx context.Context, query string, arg interface{}) (sql.Result, error)
-	Queryx(query string, args ...interface{}) (*sqlx.Rows, error)
-	QueryxContext(ctx context.Context, query string, args ...interface{}) (*sqlx.Rows, error)
-	QueryRowx(query string, args ...interface{}) *sqlx.Row
-	QueryRowxContext(ctx context.Context, query string, args ...interface{}) *sqlx.Row
+	Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
+	Get(ctx context.Context, dest interface{}, query string, args ...interface{}) error
+	NamedExec(ctx context.Context, query string, arg interface{}) (sql.Result, error)
+	NamedQuery(ctx context.Context, query string, arg interface{}) (*sqlx.Rows, error)
+	Queryx(ctx context.Context, query string, args ...interface{}) (*sqlx.Rows, error)
+	QueryRowx(ctx context.Context, query string, args ...interface{}) *sqlx.Row
 }
 
 type dbConnection struct {
@@ -60,7 +55,11 @@ func (c *dbConnection) EnableTransactionValidityCheck() {
 	c.enforceTxValidity = true
 }
 
-func (c *dbConnection) CreateTransactionConnection() (DbConnection, error) {
+func (c *dbConnection) Ping() error {
+	return c.db.Ping()
+}
+
+func (c *dbConnection) BeginTx() (DbConnection, error) {
 	tx, err := c.db.Beginx()
 	if err != nil {
 		log.Error().Err(err).Msg(ErrBeginTransactionTransactionFailed.Error())
@@ -69,10 +68,6 @@ func (c *dbConnection) CreateTransactionConnection() (DbConnection, error) {
 	connCopy := *c
 	connCopy.tx = tx
 	return &connCopy, err
-}
-
-func (c *dbConnection) Ping() error {
-	return c.db.Ping()
 }
 
 func (c *dbConnection) Commit() error {
@@ -127,17 +122,7 @@ func (c *dbConnection) PrepareNamed(query string) (*sqlx.NamedStmt, error) {
 	return c.db.PrepareNamed(query)
 }
 
-func (c *dbConnection) Exec(query string, args ...interface{}) (sql.Result, error) {
-	if c.debugLogEnabled {
-		log.Debug().Str("query", query).Interface("args", args).Msg("Exec query")
-	}
-	if c.tx != nil {
-		return c.tx.Exec(query, args...)
-	}
-	return c.db.Exec(query, args...)
-}
-
-func (c *dbConnection) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
+func (c *dbConnection) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
 	if c.debugLogEnabled {
 		log.Debug().Ctx(ctx).Str("query", query).Interface("args", args).Msg("ExecContext query")
 	}
@@ -147,17 +132,7 @@ func (c *dbConnection) ExecContext(ctx context.Context, query string, args ...in
 	return c.db.ExecContext(ctx, query, args...)
 }
 
-func (c *dbConnection) Get(dest interface{}, query string, args ...interface{}) error {
-	if c.debugLogEnabled {
-		log.Debug().Str("query", query).Interface("args", args).Msg("Get query")
-	}
-	if c.tx != nil {
-		return c.tx.Get(dest, query, args...)
-	}
-	return c.db.Get(dest, query, args...)
-}
-
-func (c *dbConnection) GetContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error {
+func (c *dbConnection) Get(ctx context.Context, dest interface{}, query string, args ...interface{}) error {
 	if c.debugLogEnabled {
 		log.Debug().Ctx(ctx).Str("query", query).Interface("args", args).Msg("GetContext query")
 	}
@@ -167,17 +142,7 @@ func (c *dbConnection) GetContext(ctx context.Context, dest interface{}, query s
 	return c.db.GetContext(ctx, dest, query, args...)
 }
 
-func (c *dbConnection) NamedExec(query string, arg interface{}) (sql.Result, error) {
-	if c.debugLogEnabled {
-		log.Debug().Str("query", query).Interface("arg", arg).Msg("NamedExec query")
-	}
-	if c.tx != nil {
-		return c.tx.NamedExec(query, arg)
-	}
-	return c.db.NamedExec(query, arg)
-}
-
-func (c *dbConnection) NamedExecContext(ctx context.Context, query string, arg interface{}) (sql.Result, error) {
+func (c *dbConnection) NamedExec(ctx context.Context, query string, arg interface{}) (sql.Result, error) {
 	if c.debugLogEnabled {
 		log.Debug().Ctx(ctx).Str("query", query).Interface("arg", arg).Msg("NamedExecContext query")
 	}
@@ -187,17 +152,7 @@ func (c *dbConnection) NamedExecContext(ctx context.Context, query string, arg i
 	return c.db.NamedExecContext(ctx, query, arg)
 }
 
-func (c *dbConnection) NamedQuery(query string, arg interface{}) (*sqlx.Rows, error) {
-	if c.debugLogEnabled {
-		log.Debug().Str("query", query).Interface("arg", arg).Msg("NamedQuery query")
-	}
-	if c.tx != nil {
-		return c.tx.NamedQuery(query, arg)
-	}
-	return c.db.NamedQuery(query, arg)
-}
-
-func (c *dbConnection) NamedQueryContext(ctx context.Context, query string, arg interface{}) (*sqlx.Rows, error) {
+func (c *dbConnection) NamedQuery(ctx context.Context, query string, arg interface{}) (*sqlx.Rows, error) {
 	if c.debugLogEnabled {
 		log.Debug().Ctx(ctx).Str("query", query).Interface("args", arg).Msg("NamedQueryContext query")
 	}
@@ -207,17 +162,7 @@ func (c *dbConnection) NamedQueryContext(ctx context.Context, query string, arg 
 	return c.db.NamedQueryContext(ctx, query, arg)
 }
 
-func (c *dbConnection) Queryx(query string, args ...interface{}) (*sqlx.Rows, error) {
-	if c.debugLogEnabled {
-		log.Debug().Str("query", query).Interface("args", args).Msg("Queryx query")
-	}
-	if c.tx != nil {
-		return c.tx.Queryx(query, args...)
-	}
-	return c.db.Queryx(query, args...)
-}
-
-func (c *dbConnection) QueryxContext(ctx context.Context, query string, args ...interface{}) (*sqlx.Rows, error) {
+func (c *dbConnection) Queryx(ctx context.Context, query string, args ...interface{}) (*sqlx.Rows, error) {
 	if c.debugLogEnabled {
 		log.Debug().Ctx(ctx).Str("query", query).Interface("args", args).Msg("QueryxContext query")
 	}
@@ -227,17 +172,7 @@ func (c *dbConnection) QueryxContext(ctx context.Context, query string, args ...
 	return c.db.QueryxContext(ctx, query, args...)
 }
 
-func (c *dbConnection) QueryRowx(query string, args ...interface{}) *sqlx.Row {
-	if c.debugLogEnabled {
-		log.Debug().Str("query", query).Interface("args", args).Msg("QueryRowx query")
-	}
-	if c.tx != nil {
-		return c.tx.QueryRowx(query, args...)
-	}
-	return c.db.QueryRowx(query, args...)
-}
-
-func (c *dbConnection) QueryRowxContext(ctx context.Context, query string, args ...interface{}) *sqlx.Row {
+func (c *dbConnection) QueryRowx(ctx context.Context, query string, args ...interface{}) *sqlx.Row {
 	if c.debugLogEnabled {
 		log.Debug().Ctx(ctx).Str("query", query).Interface("args", args).Msg("QueryRowxContext query")
 	}
