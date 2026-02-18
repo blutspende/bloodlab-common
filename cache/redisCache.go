@@ -99,6 +99,7 @@ var (
 	ErrExpirationNotSet      = errors.New("no default expiration set and no specific expiration provided")
 	ErrMutexExpirationNotSet = errors.New("no mutex expiration set for multiserver mode")
 	ErrNoClientSet           = errors.New("no redis client set in cache")
+	ErrCachingDisabled       = errors.New("redis caching is disabled")
 )
 
 var (
@@ -115,6 +116,7 @@ type RedisCacheConfig struct {
 	DefaultExpiration        *time.Duration
 	MultiserverMode          bool
 	MutexExpiration          *time.Duration
+	IsDisabled               bool
 }
 
 // Initialization
@@ -123,11 +125,17 @@ func (c *redisCache) Init(config RedisCacheConfig, refreshFillerFunc func(ctx co
 	c.config = &config
 	c.refreshFillerFunc = refreshFillerFunc
 	c.refreshInitFunc = refreshInitFunc
+	if c.config.IsDisabled {
+		log.Warn().Msg(c.fmtMsg("redis cache is disabled"))
+	}
 }
 
 // Refreshing and validity
 
 func (c *redisCache) IsValid(ctx context.Context) bool {
+	if c.config.IsDisabled {
+		return false
+	}
 	if c.config != nil && c.config.MultiserverMode {
 		valid, err := c.GetFlag(ctx, c.keyForSystem(cacheValidFlagKey))
 		if err != nil {
@@ -139,6 +147,9 @@ func (c *redisCache) IsValid(ctx context.Context) bool {
 	return c.cacheValid
 }
 func (c *redisCache) SetToInvalid(ctx context.Context) {
+	if c.config.IsDisabled {
+		return
+	}
 	if c.config != nil && c.config.MultiserverMode {
 		err := c.DeleteFlag(ctx, c.keyForSystem(cacheValidFlagKey))
 		if err != nil {
@@ -149,6 +160,9 @@ func (c *redisCache) SetToInvalid(ctx context.Context) {
 	}
 }
 func (c *redisCache) SetToValid(ctx context.Context) {
+	if c.config.IsDisabled {
+		return
+	}
 	if c.config != nil && c.config.MultiserverMode {
 		err := c.SetFlag(ctx, c.keyForSystem(cacheValidFlagKey))
 		if err != nil {
@@ -194,6 +208,9 @@ func (c *redisCache) mutexUnlock(ctx context.Context) {
 }
 
 func (c *redisCache) RefreshCacheAsync(ctx context.Context, forceUpdate bool) {
+	if c.config.IsDisabled {
+		return
+	}
 	if c.redisClient == nil {
 		log.Error().Ctx(ctx).Err(c.fmtErr(ErrNoClientSet)).Send()
 		return
@@ -205,9 +222,9 @@ func (c *redisCache) RefreshCacheAsync(ctx context.Context, forceUpdate bool) {
 	if !c.mutexTryLock(ctx) {
 		if forceUpdate {
 			c.forceUpdateRequested = true
-			log.Info().Ctx(ctx).Msg(c.fmtMsg("refresh already running, but force update requested"))
+			log.Debug().Ctx(ctx).Msg(c.fmtMsg("refresh already running, but force update requested"))
 		} else {
-			log.Info().Ctx(ctx).Msg(c.fmtMsg("refresh already running, skipping new request"))
+			log.Debug().Ctx(ctx).Msg(c.fmtMsg("refresh already running, skipping new request"))
 		}
 		return
 	}
@@ -215,7 +232,7 @@ func (c *redisCache) RefreshCacheAsync(ctx context.Context, forceUpdate bool) {
 		defer func() {
 			c.mutexUnlock(ctx)
 			if c.forceUpdateRequested {
-				log.Info().Ctx(ctx).Msg(c.fmtMsg("processing forced re-refresh request"))
+				log.Debug().Ctx(ctx).Msg(c.fmtMsg("processing forced re-refresh request"))
 				c.forceUpdateRequested = false
 				go c.RefreshCacheAsync(ctx, false)
 			}
@@ -249,7 +266,7 @@ func (c *redisCache) RefreshCacheAsync(ctx context.Context, forceUpdate bool) {
 		if err != nil {
 			log.Error().Ctx(ctx).Err(err).Msg(c.fmtMsg("refresh failed"))
 		} else {
-			log.Info().Ctx(ctx).Msg(c.fmtMsg("refresh succeeded"))
+			log.Trace().Ctx(ctx).Msg(c.fmtMsg("refresh succeeded"))
 		}
 	}()
 	return
@@ -295,6 +312,9 @@ func (c *redisCache) clearCache(ctx context.Context) error {
 // CRUD
 
 func (c *redisCache) Store(ctx context.Context, key string, content interface{}) error {
+	if c.config.IsDisabled {
+		return ErrCachingDisabled
+	}
 	if c.redisClient == nil {
 		log.Error().Ctx(ctx).Err(c.fmtErr(ErrNoClientSet)).Send()
 		return ErrNoClientSet
@@ -302,6 +322,9 @@ func (c *redisCache) Store(ctx context.Context, key string, content interface{})
 	return c.redisClient.JSONSet(ctx, key, "$", content).Err()
 }
 func (c *redisCache) StoreWithExpiration(ctx context.Context, key string, content interface{}, expirationTime *time.Duration) error {
+	if c.config.IsDisabled {
+		return ErrCachingDisabled
+	}
 	if c.redisClient == nil {
 		log.Error().Ctx(ctx).Err(c.fmtErr(ErrNoClientSet)).Send()
 		return ErrNoClientSet
@@ -325,9 +348,15 @@ func (c *redisCache) StoreWithExpiration(ctx context.Context, key string, conten
 	return err
 }
 func (c *redisCache) Read(ctx context.Context, key string, modelPtr interface{}) error {
+	if c.config.IsDisabled {
+		return ErrCachingDisabled
+	}
 	return c.read(ctx, key, modelPtr, nil)
 }
 func (c *redisCache) ReadWithExpiration(ctx context.Context, key string, modelPtr interface{}, expirationTime *time.Duration) error {
+	if c.config.IsDisabled {
+		return ErrCachingDisabled
+	}
 	if c.config == nil {
 		log.Error().Ctx(ctx).Err(c.fmtErr(ErrConfigNotSet)).Send()
 		return ErrConfigNotSet
@@ -393,6 +422,9 @@ func (c *redisCache) read(ctx context.Context, key string, modelPtr interface{},
 	return nil
 }
 func (c *redisCache) ReadGroup(ctx context.Context, keys []string, modelArrayPtr interface{}) error {
+	if c.config.IsDisabled {
+		return ErrCachingDisabled
+	}
 	if c.redisClient == nil {
 		log.Error().Ctx(ctx).Err(c.fmtErr(ErrNoClientSet)).Send()
 		return ErrNoClientSet
@@ -437,6 +469,9 @@ func (c *redisCache) ReadGroup(ctx context.Context, keys []string, modelArrayPtr
 	return nil
 }
 func (c *redisCache) Delete(ctx context.Context, key string) error {
+	if c.config.IsDisabled {
+		return ErrCachingDisabled
+	}
 	if c.redisClient == nil {
 		log.Error().Ctx(ctx).Err(c.fmtErr(ErrNoClientSet)).Send()
 		return ErrNoClientSet
@@ -447,6 +482,9 @@ func (c *redisCache) Delete(ctx context.Context, key string) error {
 // Set handling
 
 func (c *redisCache) AddItemToSet(ctx context.Context, key string, item string) error {
+	if c.config.IsDisabled {
+		return ErrCachingDisabled
+	}
 	if c.redisClient == nil {
 		log.Error().Ctx(ctx).Err(c.fmtErr(ErrNoClientSet)).Send()
 		return ErrNoClientSet
@@ -454,6 +492,9 @@ func (c *redisCache) AddItemToSet(ctx context.Context, key string, item string) 
 	return c.redisClient.SAdd(ctx, key, item).Err()
 }
 func (c *redisCache) IsItemInSet(ctx context.Context, key string, item string) (bool, error) {
+	if c.config.IsDisabled {
+		return false, ErrCachingDisabled
+	}
 	if c.redisClient == nil {
 		log.Error().Ctx(ctx).Err(c.fmtErr(ErrNoClientSet)).Send()
 		return false, ErrNoClientSet
@@ -461,6 +502,9 @@ func (c *redisCache) IsItemInSet(ctx context.Context, key string, item string) (
 	return c.redisClient.SIsMember(ctx, key, item).Result()
 }
 func (c *redisCache) GetItemsInSetAsMap(ctx context.Context, key string) (map[string]struct{}, error) {
+	if c.config.IsDisabled {
+		return nil, ErrCachingDisabled
+	}
 	if c.redisClient == nil {
 		log.Error().Ctx(ctx).Err(c.fmtErr(ErrNoClientSet)).Send()
 		return nil, ErrNoClientSet
@@ -468,6 +512,9 @@ func (c *redisCache) GetItemsInSetAsMap(ctx context.Context, key string) (map[st
 	return c.redisClient.SMembersMap(ctx, key).Result()
 }
 func (c *redisCache) DeleteItemFromSet(ctx context.Context, key string, item string) error {
+	if c.config.IsDisabled {
+		return ErrCachingDisabled
+	}
 	if c.redisClient == nil {
 		log.Error().Ctx(ctx).Err(c.fmtErr(ErrNoClientSet)).Send()
 		return ErrNoClientSet
@@ -478,6 +525,9 @@ func (c *redisCache) DeleteItemFromSet(ctx context.Context, key string, item str
 // Flag handling
 
 func (c *redisCache) SetFlag(ctx context.Context, key string) error {
+	if c.config.IsDisabled {
+		return ErrCachingDisabled
+	}
 	if c.redisClient == nil {
 		log.Error().Ctx(ctx).Err(c.fmtErr(ErrNoClientSet)).Send()
 		return ErrNoClientSet
@@ -485,6 +535,9 @@ func (c *redisCache) SetFlag(ctx context.Context, key string) error {
 	return c.redisClient.Set(ctx, key, "", 0).Err()
 }
 func (c *redisCache) SetFlagWithExpiration(ctx context.Context, key string, expirationTime *time.Duration) error {
+	if c.config.IsDisabled {
+		return ErrCachingDisabled
+	}
 	if c.redisClient == nil {
 		log.Error().Ctx(ctx).Err(c.fmtErr(ErrNoClientSet)).Send()
 		return ErrNoClientSet
@@ -496,6 +549,9 @@ func (c *redisCache) SetFlagWithExpiration(ctx context.Context, key string, expi
 	return c.redisClient.Set(ctx, key, "", *expiration).Err()
 }
 func (c *redisCache) GetFlag(ctx context.Context, key string) (bool, error) {
+	if c.config.IsDisabled {
+		return false, ErrCachingDisabled
+	}
 	if c.redisClient == nil {
 		log.Error().Ctx(ctx).Err(c.fmtErr(ErrNoClientSet)).Send()
 		return false, ErrNoClientSet
@@ -504,6 +560,9 @@ func (c *redisCache) GetFlag(ctx context.Context, key string) (bool, error) {
 	return count > 0, err
 }
 func (c *redisCache) DeleteFlag(ctx context.Context, key string) error {
+	if c.config.IsDisabled {
+		return ErrCachingDisabled
+	}
 	if c.redisClient == nil {
 		log.Error().Ctx(ctx).Err(c.fmtErr(ErrNoClientSet)).Send()
 		return ErrNoClientSet
@@ -514,6 +573,9 @@ func (c *redisCache) DeleteFlag(ctx context.Context, key string) error {
 // Index handling
 
 func (c *redisCache) CreateIndex(ctx context.Context, index string, options *redis.FTCreateOptions, fieldSchemas []*redis.FieldSchema) (string, error) {
+	if c.config.IsDisabled {
+		return "", ErrCachingDisabled
+	}
 	if c.redisClient == nil {
 		log.Error().Ctx(ctx).Err(c.fmtErr(ErrNoClientSet)).Send()
 		return "", ErrNoClientSet
@@ -521,6 +583,9 @@ func (c *redisCache) CreateIndex(ctx context.Context, index string, options *red
 	return c.redisClient.FTCreate(ctx, index, options, fieldSchemas...).Result()
 }
 func (c *redisCache) SearchInIndex(ctx context.Context, indexName string, queryString string, options *redis.FTSearchOptions, modelArrayPtr interface{}) (totalCount int, err error) {
+	if c.config.IsDisabled {
+		return 0, ErrCachingDisabled
+	}
 	if c.redisClient == nil {
 		log.Error().Ctx(ctx).Err(c.fmtErr(ErrNoClientSet)).Send()
 		return 0, ErrNoClientSet
@@ -564,6 +629,9 @@ func (c *redisCache) SearchInIndex(ctx context.Context, indexName string, queryS
 	return indexInfo.NumDocs, nil
 }
 func (c *redisCache) DeleteIndex(ctx context.Context, index string, deleteDocuments bool) error {
+	if c.config.IsDisabled {
+		return ErrCachingDisabled
+	}
 	if c.redisClient == nil {
 		log.Error().Ctx(ctx).Err(c.fmtErr(ErrNoClientSet)).Send()
 		return ErrNoClientSet
