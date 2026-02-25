@@ -11,9 +11,8 @@ import (
 type DbConnection interface {
 	SetSqlConnection(db *sqlx.DB)
 	EnableQueryLogging()
-	EnableTransactionValidityCheck()
 	Ping() error
-	BeginTx() (DbConnection, error)
+	BeginTx(ctx context.Context) (DbConnection, error)
 	Commit() error
 	Rollback() error
 	Rebind(query string) string
@@ -27,10 +26,9 @@ type DbConnection interface {
 }
 
 type dbConnection struct {
-	db                *sqlx.DB
-	tx                *sqlx.Tx
-	debugLogEnabled   bool
-	enforceTxValidity bool
+	db              *sqlx.DB
+	tx              *sqlx.Tx
+	debugLogEnabled bool
 }
 
 func NewEmptyDbConnection() DbConnection {
@@ -38,10 +36,9 @@ func NewEmptyDbConnection() DbConnection {
 }
 func NewDbConnection(db *sqlx.DB) DbConnection {
 	return &dbConnection{
-		db:                db,
-		tx:                nil,
-		debugLogEnabled:   false,
-		enforceTxValidity: false,
+		db:              db,
+		tx:              nil,
+		debugLogEnabled: false,
 	}
 }
 
@@ -51,16 +48,13 @@ func (c *dbConnection) SetSqlConnection(db *sqlx.DB) {
 func (c *dbConnection) EnableQueryLogging() {
 	c.debugLogEnabled = true
 }
-func (c *dbConnection) EnableTransactionValidityCheck() {
-	c.enforceTxValidity = true
-}
 
 func (c *dbConnection) Ping() error {
 	return c.db.Ping()
 }
 
-func (c *dbConnection) BeginTx() (DbConnection, error) {
-	tx, err := c.db.Beginx()
+func (c *dbConnection) BeginTx(ctx context.Context) (DbConnection, error) {
+	tx, err := c.db.BeginTxx(ctx, nil)
 	if err != nil {
 		log.Error().Err(err).Msg(ErrBeginTransactionTransactionFailed.Error())
 		return nil, ErrBeginTransactionTransactionFailed
@@ -75,10 +69,7 @@ func (c *dbConnection) Commit() error {
 		log.Debug().Msg("commit transaction")
 	}
 	if c.tx == nil {
-		if c.enforceTxValidity {
-			return ErrCommitWithoutTransaction
-		}
-		return nil
+		return ErrCommitWithoutTransaction
 	}
 	err := c.tx.Commit()
 	c.tx = nil
@@ -94,10 +85,7 @@ func (c *dbConnection) Rollback() error {
 		log.Debug().Msg("rollback transaction")
 	}
 	if c.tx == nil {
-		if c.enforceTxValidity {
-			return ErrRollbackWithoutTransaction
-		}
-		return nil
+		return ErrRollbackWithoutTransaction
 	}
 	err := c.tx.Rollback()
 	c.tx = nil

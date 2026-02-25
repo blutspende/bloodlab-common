@@ -100,7 +100,7 @@ GuidToString(id uuid.UUID) string
 # Db
 `github.com/blutspende/bloodlab-common/db`
 
-Contains the `Postgres` class to handle Postgres connection, 
+Contains the `Postgres` class to handle Postgres connection and some utility functions for sql specific nullable types.
 
 ## Postgres
 `Postgres` is a class for handling Postgres connections. It provides methods for connecting, disconnecting, and obtaining the underlying raw SQL connection `*sqlx.DB`.
@@ -126,6 +126,14 @@ The `*int` types can be set to `nil` to avoid setting those configurations on th
 `DbConnection` is a class for transaction and query handling. It allows direct execution of queries, as well as transaction management with `CreateTransactionConnection`, `Commit` and `Rollback` methods.
 Specific error codes and code conversions are also provided.
 
+## Utility functions
+```go
+func NullStringToString(value sql.NullString) string
+func NullStringToStringPointer(value sql.NullString) *string
+func NullTimeToTimePointer(value sql.NullTime) *time.Time
+func TimePointerToNullTime(value *time.Time) sql.NullTime
+```
+
 # Encoding
 `github.com/blutspende/bloodlab-common/encoding`
 
@@ -133,25 +141,15 @@ Contains a list of encodings. Can be used with this library's encoding utility f
 
 Also contains utility functions for encoding and decoding.
 ```go
-func ConvertFromEncodingToUtf8(input []byte, encoding encoding.Encoding) (output string, err error)
-func ConvertFromUtf8ToEncoding(input string, encoding encoding.Encoding) (output []byte, err error)
-func ConvertArrayFromUtf8ToEncoding(input []string, encoding encoding.Encoding) (output [][]byte, err error) 
+func ConvertFromEncodingToUTF8(input []byte, encoding encoding.Encoding) (output string, err error)
+func ConvertFromUTF8ToEncoding(input string, encoding encoding.Encoding) (output []byte, err error)
+func ConvertArrayFromUTF8ToEncoding(input []string, encoding encoding.Encoding) (output [][]byte, err error) 
 ```
 
-# Instrumentdef
-`github.com/blutspende/bloodlab-common/instrumentdef`
+# Instrument
+`github.com/blutspende/bloodlab-common/instrument`
 
 Contains common enum and type definitions related to instruments.
-
-# MessageStatus
-`github.com/blutspende/bloodlab-common/messagsestatus`
-
-List of message statuses. Used in drivers to store and read states of messages.
-
-# MessageType
-`github.com/blutspende/bloodlab-common/messagetype`
-
-List of message types. Used in drivers to identify and process messages.
 
 # Pagination
 `github.com/blutspende/bloodlab-common/pagination`
@@ -163,11 +161,14 @@ Contains pagination related structs, helpers and constants.
 # Timezone
 `github.com/blutspende/bloodlab-common/timezone`
 
-Contains a list of timezones. Can be used with `GetLocation` function or directly with `time.LoadLocation` to get a `*time.Location`.
+Contains a list of timezones. 
+`TimeZone` has a `GetLocation()` method, or can be passed to `time.LoadLocation()` to get a `*time.Location`.
 
-Also contains a utility function for timezones.
+The package also contains some utility functions for time formatting and parsing.
+
 ```go
-func (t TimeZone) GetLocation() (*time.Location, error)
+func FormatTimeStringToBerlinTime(timeString, format string) time.Time
+func ParseBerlinTimeStringToUTCTime(timeString string) time.Time
 ```
 
 # Utils
@@ -178,9 +179,9 @@ Various utility functions used throughout bloodlab.
 ## Slices
 Contains utility functions for slices.
 ```go
-func ConvertBytes2Dto1D(twoDim [][]byte) []byte
-func ConvertBytes2Dto1DWithCheck(twoDim [][]byte) ([]byte, error)
-func ConvertBytes1Dto2D(oneDim []byte) [][]byte
+func JoinByteSlicesWithLF(twoDim [][]byte) []byte
+func JoinSingleLineByteSlicesWithLF(twoDim [][]byte) ([]byte, error)
+func SplitByteSliceByLF(oneDim []byte) [][]byte
 func JoinEnumsAsString[T ~string](enumList []T, separator string) string
 func Partition(totalLength int, partitionLength int, consumer func(low int, high int) error) error
 ```
@@ -188,22 +189,9 @@ func Partition(totalLength int, partitionLength int, consumer func(low int, high
 ## Types
 Contains type conversion utility functions. Converting between null, pointer and normal representations of string, UUID and time types.
 ```go
-func StringToPointer(value string) *string
 func StringToPointerWithNil(value string) *string
 func StringPointerToString(value *string) string
 func StringPointerToStringWithDefault(value *string, defaultValue string) string
-func NullStringToString(value sql.NullString) string
-func NullStringToStringPointer(value sql.NullString) *string
 func UUIDToNullUUID(value uuid.UUID) uuid.NullUUID
 func NullUUIDToUUIDPointer(value uuid.NullUUID) *uuid.UUID
-func NullTimeToTimePointer(value sql.NullTime) *time.Time
-func TimePointerToNullTime(value *time.Time) sql.NullTime
-func IntToPointer(value int) *int
-```
-
-## Helpers
-Contains miscellaneous helper functions.
-```go
-func FormatTimeStringToBerlinTime(timeString, format string) time.Time
-func ParseBerlinTimeStringToUTCTime(timeString string) time.Time
 ```

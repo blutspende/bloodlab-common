@@ -1,11 +1,12 @@
 package utils
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-func TestSlices_ConvertBytes2Dto1D(t *testing.T) {
+func TestSlices_JoinByteSlicesWithLF(t *testing.T) {
 	// Arrange
 	input := [][]byte{
 		[]byte("first"),
@@ -13,11 +14,11 @@ func TestSlices_ConvertBytes2Dto1D(t *testing.T) {
 		[]byte("third"),
 	}
 	// Act
-	result := ConvertBytes2Dto1D(input)
+	result := JoinByteSlicesWithLF(input)
 	// Assert
 	assert.Equal(t, []byte("first\nsecond\nthird"), result)
 }
-func TestSlices_ConvertBytes2Dto1D_WithEmpty(t *testing.T) {
+func TestSlices_JoinByteSlicesWithLF_WithEmpty(t *testing.T) {
 	// Arrange
 	input := [][]byte{
 		[]byte("first"),
@@ -25,11 +26,11 @@ func TestSlices_ConvertBytes2Dto1D_WithEmpty(t *testing.T) {
 		[]byte("third"),
 	}
 	// Act
-	result := ConvertBytes2Dto1D(input)
+	result := JoinByteSlicesWithLF(input)
 	// Assert
 	assert.Equal(t, []byte("first\n\nthird"), result)
 }
-func TestSlices_ConvertBytes2Dto1D_WithUTF8(t *testing.T) {
+func TestSlices_JoinByteSlicesWithLF_WithUTF8(t *testing.T) {
 	// Arrange
 	input := [][]byte{
 		[]byte("first"),
@@ -37,12 +38,12 @@ func TestSlices_ConvertBytes2Dto1D_WithUTF8(t *testing.T) {
 		[]byte("third"),
 	}
 	// Act
-	result := ConvertBytes2Dto1D(input)
+	result := JoinByteSlicesWithLF(input)
 	// Assert
 	assert.Equal(t, []byte("first\nűúőéáéí\nthird"), result)
 }
 
-func TestSlices_ConvertBytes2Dto1DWithCheck(t *testing.T) {
+func TestSlices_JoinSingleLineByteSlicesWithLF(t *testing.T) {
 	// Arrange
 	input := [][]byte{
 		[]byte("first"),
@@ -50,12 +51,12 @@ func TestSlices_ConvertBytes2Dto1DWithCheck(t *testing.T) {
 		[]byte("third"),
 	}
 	// Act
-	result, err := ConvertBytes2Dto1DWithCheck(input)
+	result, err := JoinSingleLineByteSlicesWithLF(input)
 	// Assert
 	assert.Nil(t, err)
 	assert.Equal(t, []byte("first\nsecond\nthird"), result)
 }
-func TestSlices_ConvertBytes2Dto1DWithCheck_Error(t *testing.T) {
+func TestSlices_JoinSingleLineByteSlicesWithLF_Error(t *testing.T) {
 	// Arrange
 	input := [][]byte{
 		[]byte("first"),
@@ -63,17 +64,17 @@ func TestSlices_ConvertBytes2Dto1DWithCheck_Error(t *testing.T) {
 		[]byte("third"),
 	}
 	// Act
-	result, err := ConvertBytes2Dto1DWithCheck(input)
+	result, err := JoinSingleLineByteSlicesWithLF(input)
 	// Assert
-	assert.Error(t, err)
+	assert.ErrorIs(t, err, ErrSliceContainsLF)
 	assert.Equal(t, []byte{}, result)
 }
 
-func TestSlices_ConvertBytes1Dto2D(t *testing.T) {
+func TestSlices_SplitByteSliceByLF(t *testing.T) {
 	// Arrange
 	input := []byte("first\nsecond\nthird")
 	// Act
-	result := ConvertBytes1Dto2D(input)
+	result := SplitByteSliceByLF(input)
 	// Assert
 	assert.Len(t, result, 3)
 	assert.Equal(t, []byte("first"), result[0])

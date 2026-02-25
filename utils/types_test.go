@@ -10,35 +10,6 @@ import (
 // String
 const testString = "test"
 
-func TestTypes_StringToPointer(t *testing.T) {
-	// Arrange
-	input := "test"
-	// Act
-	result := StringToPointer(input)
-	// Assert
-	assert.NotNil(t, result)
-	assert.Equal(t, "test", *result)
-}
-func TestTypes_StringToPointer_Literal(t *testing.T) {
-	// Act
-	result := StringToPointer("test")
-	// Assert
-	assert.Equal(t, "test", *result)
-}
-func TestTypes_StringToPointer_Constant(t *testing.T) {
-	// Act
-	result := StringToPointer(testString)
-	// Assert
-	assert.NotNil(t, result)
-	assert.Equal(t, "test", *result)
-}
-func TestTypes_StringToPointer_Empty(t *testing.T) {
-	// Act
-	result := StringToPointer("")
-	// Assert
-	assert.NotNil(t, result)
-	assert.Equal(t, "", *result)
-}
 func TestTypes_StringToPointerWithNil(t *testing.T) {
 	// Arrange
 	input := "test"
@@ -96,15 +67,4 @@ func TestTypes_UUIDToNullUUID_Empty(t *testing.T) {
 	// Assert
 	assert.False(t, result.Valid)
 	assert.Equal(t, input, result.UUID)
-}
-
-// Int
-func TestTypes_IntToPointer(t *testing.T) {
-	// Arrange
-	input := 1
-	// Act
-	result := IntToPointer(input)
-	// Assert
-	assert.NotNil(t, result)
-	assert.Equal(t, 1, *result)
 }

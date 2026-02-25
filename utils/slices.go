@@ -7,26 +7,33 @@ import (
 	"strings"
 )
 
-var byteSeparator = byte(0x0A) // ASCII Line Feed (LF) character
+const lineFeed = byte(0x0A)
 
-func ConvertBytes2Dto1D(twoDim [][]byte) []byte {
-	return bytes.Join(twoDim, []byte{byteSeparator})
+var ErrSliceContainsLF = fmt.Errorf("slice contains lineFeed (0x0A)")
+
+func JoinByteSlicesWithLF(byteSlices [][]byte) []byte {
+	return bytes.Join(byteSlices, []byte{lineFeed})
 }
-func ConvertBytes2Dto1DWithCheck(twoDim [][]byte) ([]byte, error) {
-	result := []byte{}
-	for i, row := range twoDim {
-		if slices.Contains(row, byteSeparator) {
-			return []byte{}, fmt.Errorf("2D byte array contains invalid separator character LF (0x0A)")
+
+// JoinSingleLineByteSlicesWithLF concatenates a slice of byte slices into a single byte slice, separating them with a line feed (0x0A).
+// It returns an error if any of the input byte slices contains a line feed.
+func JoinSingleLineByteSlicesWithLF(byteSlices [][]byte) ([]byte, error) {
+	result := make([]byte, 0)
+	for i := range byteSlices {
+		if slices.Contains(byteSlices[i], lineFeed) {
+			return []byte{}, fmt.Errorf("%w: %q", ErrSliceContainsLF, byteSlices[i])
 		}
 		if i > 0 {
-			result = append(result, byteSeparator)
+			result = append(result, lineFeed)
 		}
-		result = append(result, row...)
+		result = append(result, byteSlices[i]...)
 	}
+
 	return result, nil
 }
-func ConvertBytes1Dto2D(oneDim []byte) [][]byte {
-	return bytes.Split(oneDim, []byte{byteSeparator})
+
+func SplitByteSliceByLF(oneDim []byte) [][]byte {
+	return bytes.Split(oneDim, []byte{lineFeed})
 }
 
 func JoinEnumsAsString[T ~string](enumList []T, separator string) string {
