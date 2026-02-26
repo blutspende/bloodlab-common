@@ -1,14 +1,9 @@
 package utils
 
 import (
-	"database/sql"
 	"github.com/google/uuid"
-	"time"
 )
 
-func StringToPointer(value string) *string {
-	return &value
-}
 func StringToPointerWithNil(value string) *string {
 	if value == "" {
 		return nil
@@ -22,24 +17,12 @@ func StringPointerToString(value *string) string {
 	}
 	return ""
 }
+
 func StringPointerToStringWithDefault(value *string, defaultValue string) string {
 	if value != nil {
 		return *value
 	}
 	return defaultValue
-}
-
-func NullStringToString(value sql.NullString) string {
-	if value.Valid {
-		return value.String
-	}
-	return ""
-}
-func NullStringToStringPointer(value sql.NullString) *string {
-	if value.Valid {
-		return &value.String
-	}
-	return nil
 }
 
 func UUIDToNullUUID(value uuid.UUID) uuid.NullUUID {
@@ -54,20 +37,4 @@ func NullUUIDToUUIDPointer(value uuid.NullUUID) *uuid.UUID {
 		return &value.UUID
 	}
 	return nil
-}
-
-func NullTimeToTimePointer(value sql.NullTime) *time.Time {
-	if value.Valid {
-		return &value.Time
-	}
-	return nil
-}
-func TimePointerToNullTime(value *time.Time) sql.NullTime {
-	if value != nil {
-		return sql.NullTime{
-			Time:  *value,
-			Valid: true,
-		}
-	}
-	return sql.NullTime{}
 }

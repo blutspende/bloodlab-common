@@ -1,13 +1,9 @@
-package utils
+package timezone
 
-import (
-	"time"
-
-	"github.com/blutspende/bloodlab-common/timezone"
-)
+import "time"
 
 func FormatTimeStringToBerlinTime(timeString, format string) time.Time {
-	location, err := timezone.EuropeBerlin.GetLocation()
+	location, err := EuropeBerlin.GetLocation()
 	if err != nil {
 		return time.Time{}
 	}
@@ -19,7 +15,7 @@ func FormatTimeStringToBerlinTime(timeString, format string) time.Time {
 }
 
 func ParseBerlinTimeStringToUTCTime(timeString string) time.Time {
-	location, err := timezone.EuropeBerlin.GetLocation()
+	location, err := EuropeBerlin.GetLocation()
 	if err != nil {
 		return time.Time{}
 	}

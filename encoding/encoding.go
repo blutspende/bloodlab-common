@@ -1,5 +1,14 @@
 package encoding
 
+import (
+	"fmt"
+
+	"golang.org/x/text/encoding"
+	"golang.org/x/text/encoding/charmap"
+	"golang.org/x/text/encoding/unicode"
+	"golang.org/x/text/encoding/unicode/utf32"
+)
+
 type Encoding string
 
 const UTF8 Encoding = "UTF8"
@@ -55,3 +64,116 @@ const KOI8R Encoding = "KOI8-R"
 const KOI8U Encoding = "KOI8-U"
 const Macintosh Encoding = "Macintosh"
 const MacintoshCyrillic Encoding = "MacintoshCyrillic"
+
+func (encoding Encoding) GetEncoding() (encoding.Encoding, error) {
+	switch encoding {
+	case UTF8:
+		return nil, nil
+	case UTF16:
+		return unicode.UTF16(unicode.LittleEndian, unicode.UseBOM), nil
+	case UTF16BE:
+		return unicode.UTF16(unicode.BigEndian, unicode.IgnoreBOM), nil
+	case UTF16LE:
+		return unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM), nil
+	case UTF32:
+		return utf32.UTF32(utf32.LittleEndian, utf32.UseBOM), nil
+	case UTF32BE:
+		return utf32.UTF32(utf32.BigEndian, utf32.IgnoreBOM), nil
+	case UTF32LE:
+		return utf32.UTF32(utf32.LittleEndian, utf32.IgnoreBOM), nil
+	case ASCII:
+		return nil, nil
+	case Windows874:
+		return charmap.Windows874, nil
+	case Windows1250:
+		return charmap.Windows1250, nil
+	case Windows1251:
+		return charmap.Windows1251, nil
+	case Windows1252:
+		return charmap.Windows1252, nil
+	case Windows1253:
+		return charmap.Windows1253, nil
+	case Windows1254:
+		return charmap.Windows1254, nil
+	case Windows1255:
+		return charmap.Windows1255, nil
+	case Windows1256:
+		return charmap.Windows1256, nil
+	case Windows1257:
+		return charmap.Windows1257, nil
+	case Windows1258:
+		return charmap.Windows1258, nil
+	case DOS852:
+		return charmap.CodePage852, nil
+	case DOS855:
+		return charmap.CodePage855, nil
+	case DOS866:
+		return charmap.CodePage866, nil
+	case ISO8859_1:
+		return charmap.ISO8859_1, nil
+	case ISO8859_2:
+		return charmap.ISO8859_2, nil
+	case ISO8859_3:
+		return charmap.ISO8859_3, nil
+	case ISO8859_4:
+		return charmap.ISO8859_4, nil
+	case ISO8859_5:
+		return charmap.ISO8859_5, nil
+	case ISO8859_6:
+		return charmap.ISO8859_6, nil
+	case ISO8859_6E:
+		return charmap.ISO8859_6E, nil
+	case ISO8859_6I:
+		return charmap.ISO8859_6I, nil
+	case ISO8859_7:
+		return charmap.ISO8859_7, nil
+	case ISO8859_8:
+		return charmap.ISO8859_8, nil
+	case ISO8859_8E:
+		return charmap.ISO8859_8E, nil
+	case ISO8859_8I:
+		return charmap.ISO8859_8I, nil
+	case ISO8859_9:
+		return charmap.ISO8859_9, nil
+	case ISO8859_10:
+		return charmap.ISO8859_10, nil
+	case ISO8859_13:
+		return charmap.ISO8859_13, nil
+	case ISO8859_14:
+		return charmap.ISO8859_14, nil
+	case ISO8859_15:
+		return charmap.ISO8859_15, nil
+	case ISO8859_16:
+		return charmap.ISO8859_16, nil
+	case IBM037:
+		return charmap.CodePage037, nil
+	case IBM437:
+		return charmap.CodePage437, nil
+	case IBM850:
+		return charmap.CodePage850, nil
+	case IBM858:
+		return charmap.CodePage858, nil
+	case IBM860:
+		return charmap.CodePage860, nil
+	case IBM862:
+		return charmap.CodePage862, nil
+	case IBM863:
+		return charmap.CodePage863, nil
+	case IBM865:
+		return charmap.CodePage865, nil
+	case IBM1047:
+		return charmap.CodePage1047, nil
+	case IBM1140:
+		return charmap.CodePage1140, nil
+	case KOI8R:
+		return charmap.KOI8R, nil
+	case KOI8U:
+		return charmap.KOI8U, nil
+	case Macintosh:
+		return charmap.Macintosh, nil
+	case MacintoshCyrillic:
+		return charmap.MacintoshCyrillic, nil
+	default:
+		return nil, fmt.Errorf("%s: invalid encoding", encoding)
+	}
+}
