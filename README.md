@@ -1,5 +1,5 @@
 # bloodlab-common
-Constants, classes and utilities used across multiple libraries and services
+Constants, classes, and utilities to be used across multiple libraries and services
 
 ###### Install
 `go get github.com/blutspende/bloodlab-common`
@@ -35,12 +35,14 @@ type RedisCacheConfig struct {
     DefaultExpiration        *time.Duration
     MultiserverMode          bool
     MutexExpiration          *time.Duration
+    IsDisabled               bool
 }
 ```
 Refresh parameters are used to configure the retry policy for the refresh mechanism. Refresh starts with `RefreshRetryWaitStartMs` milliseconds wait time, and increases the wait time exponentially by `RefreshRetryWaitExponent` for each retry, up to `RefreshRetryAttempts` retries.
 `DefaultExpiration` is used in `...WithExpiration` functions if explicit expiration is not provided.
 `MultiserverMode` enables multiserver support, which allows multiple programs (or multiple instances of the same program) to simultaneously access the same redis cache without causing issues.
 `MutexExpiration` is used to set the expiration time for mutex locks used in multiserver mode, to avoid permanently locked states if an instance crashes while holding a lock.
+`IsDisabled` can be used to disable the cache, avoiding any interaction with the cache (saving time for development and testing), and returns an error in any operation is attempted. `IsValid` always returns false in this case.
 
 ### Refreshing and validity
 Cache has an internally stored validity state, which can be checked with `IsValid` method. If the cache is invalid, it should be refreshed with `RefreshCacheAsync` method, it is not done automatically, but calling any read operation will result in error. The cache can be actively invalidated with `SetToInvalid` method, or manually set to valid (without calling `RefreshCacheAsync`) with `SetToValid` method if needed.
@@ -154,7 +156,7 @@ Contains common enum and type definitions related to instruments.
 # Pagination
 `github.com/blutspende/bloodlab-common/pagination`
 
-Contains pagination related structs, helpers and constants.
+Contains pagination related structs, helpers, and constants.
 `TotalPages` should always be used to calculate total pages based on total items and page size to make sure consistent behavior.
 `StandardisePaginatedQuery` should be used to standardize pagination values. It makes sure that page size is one of the allowed sizes, and page number is not negative. `StandardPageSizes` and `ValidPageSizes` can also be used for validation.
 
@@ -187,7 +189,7 @@ func Partition(totalLength int, partitionLength int, consumer func(low int, high
 ```
 
 ## Types
-Contains type conversion utility functions. Converting between null, pointer and normal representations of string, UUID and time types.
+Contains type conversion utility functions. Converting between null, pointer, and normal representations of string, UUID, and time types.
 ```go
 func StringToPointerWithNil(value string) *string
 func StringPointerToString(value *string) string
