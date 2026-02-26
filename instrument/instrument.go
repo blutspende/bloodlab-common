@@ -7,14 +7,6 @@ const (
 	TypeSorter   Type = "SORTER"
 )
 
-type ConnectionStatus string
-
-const (
-	ConnectionStatusOffline ConnectionStatus = "OFFLINE"
-	ConnectionStatusReady   ConnectionStatus = "READY"
-	ConnectionStatusOnline  ConnectionStatus = "ONLINE"
-)
-
 type ConnectionMode string
 
 const (
@@ -23,6 +15,14 @@ const (
 	ConnectionModeFileServer ConnectionMode = "FILE_SERVER"
 	ConnectionModeHTTP       ConnectionMode = "HTTP"
 	ConnectionModeTCPMixed   ConnectionMode = "TCP_MIXED"
+)
+
+type ConnectionStatus string
+
+const (
+	ConnectionStatusOffline ConnectionStatus = "OFFLINE"
+	ConnectionStatusReady   ConnectionStatus = "READY"
+	ConnectionStatusOnline  ConnectionStatus = "ONLINE"
 )
 
 type Ability string
@@ -86,3 +86,11 @@ const MessageTypeCancellation MessageType = "CANCELLATION"
 const MessageTypeReorder MessageType = "REORDER"
 const MessageTypeDiagnostics MessageType = "DIAGNOSTICS"
 const MessageTypeUnidentified MessageType = "UNIDENTIFIED"
+
+type ResultMode string
+
+const (
+	ResultModeSimulation    ResultMode = "SIMULATION"
+	ResultModeQualification ResultMode = "QUALIFICATION"
+	ResultModeProduction    ResultMode = "PRODUCTION"
+)

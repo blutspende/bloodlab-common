@@ -125,7 +125,7 @@ type PgConfig struct {
 The `*int` types can be set to `nil` to avoid setting those configurations on the database connection.
 
 ## DbConnection
-`DbConnection` is a class for transaction and query handling. It allows direct execution of queries, as well as transaction management with `CreateTransactionConnection`, `Commit` and `Rollback` methods.
+`DbConnection` is a class for transaction and query handling. It allows direct execution of queries, as well as transaction management with `BeginTx`, `Commit` and `Rollback` methods.
 Specific error codes and code conversions are also provided.
 
 ## Utility functions
