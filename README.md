@@ -23,7 +23,7 @@ After creating the `Init` method should be called to initialize the cache.
 func (c *redisCache) Init(config RedisCacheConfig, refreshFillerFunc func(ctx context.Context) error, refreshInitFunc func(ctx context.Context) error)
 ```
 RedisCache has built-in support for refreshing with automated retry policy, and custom filler and init functions, which can be provided in the init.
-Calling `Init` can be omitted if neither refresh, nor any of the config's functions are used. But be cautious, as these functions will produce errors if called without initialization.
+Calling `Init` can be omitted if neither refresh nor any of the config's functions are used. But be cautious, as these functions will produce errors if called without initialization.
 
 ### Config
 The `RedisCacheConfig` struct is used to configure the cache instance.
@@ -50,7 +50,7 @@ Cache has an internally stored validity state, which can be checked with `IsVali
 func RefreshCacheAsync(ctx context.Context, forceUpdate bool)
 ```
 Can be called to refresh the cache asynchronously, using the filler and init functions provided in the `Init` method.
-If `forceUpdate` is set to true, the cache will be refreshed even if another refresh is already in progress, after that is finished. If is useful if the cache is known to be stale, and needs to be updated as soon as possible (eg: after create of update events). If `forceUpdate` is false, and a refresh is already in progress, the call won't do anything.
+If `forceUpdate` is set to true, the cache will be refreshed even if another refresh is already in progress, after that is finished. If is useful if the cache is known to be stale, and needs to be updated as soon as possible (e.g.: after create of update events). If `forceUpdate` is false, and a refresh is already in progress, the call won't do anything.
 
 ### CRUD
 The cache provides basic CRUD operations for storing and retrieving data using keys and an underlying JSON format.
@@ -94,7 +94,7 @@ KeyForCustom(customKey string) string
 KeyForValuedCustom(name string, values ...string) string
 KeyForNotFound() string
 ```
-Additionally, there is a helper function for custom keys involving UUIDs. It is important to use it, because regular UUID to string conversion uses dashes, which are not allowed in Redis keys.
+Additionally, there is a helper function for custom keys involving UUIDs. It is important to use it because regular UUID to string conversion uses dashes, which are not allowed in Redis keys.
 ```go
 GuidToString(id uuid.UUID) string
 ```
@@ -102,7 +102,7 @@ GuidToString(id uuid.UUID) string
 # Db
 `github.com/blutspende/bloodlab-common/db`
 
-Contains the `Postgres` class to handle Postgres connection and some utility functions for sql specific nullable types.
+Contains the `Postgres` class to handle Postgres connection and some utility functions for SQL specific nullable types.
 
 ## Postgres
 `Postgres` is a class for handling Postgres connections. It provides methods for connecting, disconnecting, and obtaining the underlying raw SQL connection `*sqlx.DB`.
@@ -139,7 +139,7 @@ func TimePointerToNullTime(value *time.Time) sql.NullTime
 # Encoding
 `github.com/blutspende/bloodlab-common/encoding`
 
-Contains a list of encodings. Can be used with this library's encoding utility functions directly, or with other message processing libraries such as `github.com/blutspende/go-astm`.
+Contains a list of encodings. Can be used with this library's encoding utility functions directly or with other message processing libraries such as `github.com/blutspende/go-astm`.
 
 Also contains utility functions for encoding and decoding.
 ```go
