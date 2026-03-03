@@ -13,12 +13,12 @@ const (
 )
 
 var (
-	ErrBeginTransactionTransactionFailed    = errors.New("begin transaction failed")
-	ErrCommitTransactionTransactionFailed   = errors.New("commit transaction failed")
-	ErrRollbackTransactionTransactionFailed = errors.New("revert transaction failed")
-	ErrCommitWithoutTransaction             = errors.New("invalid transaction, can not perform commit without transaction")
-	ErrRollbackWithoutTransaction           = errors.New("invalid transaction, can not perform rollback without transaction")
-	ErrNoPgConnection                       = errors.New("postgres connection is not established")
+	ErrBeginTransactionFailed     = errors.New("begin transaction failed")
+	ErrCommitTransactionFailed    = errors.New("commit transaction failed")
+	ErrRollbackTransactionFailed  = errors.New("revert transaction failed")
+	ErrCommitWithoutTransaction   = errors.New("invalid transaction, can not perform commit without transaction")
+	ErrRollbackWithoutTransaction = errors.New("invalid transaction, can not perform rollback without transaction")
+	ErrNoPgConnection             = errors.New("postgres connection is not established")
 )
 
 func IsErrorCode(err error, errcode pq.ErrorCode) bool {
