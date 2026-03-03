@@ -56,8 +56,8 @@ func (c *dbConnection) Ping() error {
 func (c *dbConnection) BeginTx(ctx context.Context) (DbConnection, error) {
 	tx, err := c.db.BeginTxx(ctx, nil)
 	if err != nil {
-		log.Error().Err(err).Msg(ErrBeginTransactionTransactionFailed.Error())
-		return nil, ErrBeginTransactionTransactionFailed
+		log.Error().Err(err).Msg(ErrBeginTransactionFailed.Error())
+		return nil, ErrBeginTransactionFailed
 	}
 	connCopy := *c
 	connCopy.tx = tx
@@ -74,8 +74,8 @@ func (c *dbConnection) Commit() error {
 	err := c.tx.Commit()
 	c.tx = nil
 	if err != nil {
-		log.Error().Err(err).Msg(ErrCommitTransactionTransactionFailed.Error())
-		return ErrCommitTransactionTransactionFailed
+		log.Error().Err(err).Msg(ErrCommitTransactionFailed.Error())
+		return ErrCommitTransactionFailed
 	}
 	return nil
 }
@@ -90,8 +90,8 @@ func (c *dbConnection) Rollback() error {
 	err := c.tx.Rollback()
 	c.tx = nil
 	if err != nil {
-		log.Error().Err(err).Msg(ErrRollbackTransactionTransactionFailed.Error())
-		return ErrRollbackTransactionTransactionFailed
+		log.Error().Err(err).Msg(ErrRollbackTransactionFailed.Error())
+		return ErrRollbackTransactionFailed
 	}
 	return nil
 }
