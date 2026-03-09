@@ -240,6 +240,7 @@ func (c *redisCache) RefreshCacheAsync(ctx context.Context, forceUpdate bool) {
 		}
 		return
 	}
+	c.SetToInvalid(ctx)
 	go func() {
 		defer func() {
 			c.mutexUnlock(ctx)
@@ -250,7 +251,6 @@ func (c *redisCache) RefreshCacheAsync(ctx context.Context, forceUpdate bool) {
 			}
 		}()
 		err := c.retry(c.config.RefreshRetryAttempts, (time.Duration)(c.config.RefreshRetryWaitStartMs)*time.Millisecond, (float64)(c.config.RefreshRetryWaitExponent), func() error {
-			c.SetToInvalid(ctx)
 			err := c.clearCache(ctx)
 			if err != nil {
 				log.Warn().Ctx(ctx).Err(err).Msg(c.fmtMsg("refresh clear cache failed"))

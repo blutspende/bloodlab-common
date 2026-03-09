@@ -1,4 +1,4 @@
-package instrument
+package instrumentenum
 
 type Type string
 
@@ -28,6 +28,7 @@ const (
 type Ability string
 
 const (
+	AbilityAllowResending         Ability = "ALLOW_RESENDING"
 	AbilityCanAcceptResults       Ability = "CAN_ACCEPT_RESULTS"
 	AbilityCanReplyToQuery        Ability = "CAN_REPLY_TO_QUERY"
 	AbilityCanCaptureDiagnostics  Ability = "CAN_CAPTURE_DIAGNOSTICS"
@@ -90,7 +91,30 @@ const MessageTypeUnidentified MessageType = "UNIDENTIFIED"
 type ResultMode string
 
 const (
-	ResultModeSimulation    ResultMode = "SIMULATION"
+	// Simulated results will not be transmitted to Cerberus and stay within the driver
+	ResultModeSimulation ResultMode = "SIMULATION"
+	// Qualification Results are transmitted to cerberus but not returned to any EIA interface
 	ResultModeQualification ResultMode = "QUALIFICATION"
-	ResultModeProduction    ResultMode = "PRODUCTION"
+	// Production allows the results to be returned via EIA
+	ResultModeProduction ResultMode = "PRODUCTION"
+)
+
+type ResultType string
+
+const (
+	ResultTypeInt            ResultType = "int"
+	ResultTypeDecimal        ResultType = "decimal"
+	ResultTypeBoundedDecimal ResultType = "boundedDecimal"
+	ResultTypeString         ResultType = "string"
+	ResultTypePein           ResultType = "pein"
+	ResultTypeReact          ResultType = "react"
+	ResultTypeInValid        ResultType = "invalid"
+	ResultTypeEnum           ResultType = "enum"
+)
+
+type ReagentType string
+
+const (
+	ReagentTypeStandard ReagentType = "reagent"
+	ReagentTypeDiluent  ReagentType = "diluent"
 )
