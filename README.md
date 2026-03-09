@@ -148,8 +148,8 @@ func ConvertFromUTF8ToEncoding(input string, encoding encoding.Encoding) (output
 func ConvertArrayFromUTF8ToEncoding(input []string, encoding encoding.Encoding) (output [][]byte, err error) 
 ```
 
-# Instrument
-`github.com/blutspende/bloodlab-common/instrument`
+# Instrumentenum
+`github.com/blutspende/bloodlab-common/instrumentenum`
 
 Contains common enum and type definitions related to instruments.
 
