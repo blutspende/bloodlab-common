@@ -145,7 +145,7 @@ func (c *dbConnection) NamedQuery(ctx context.Context, query string, arg interfa
 		log.Debug().Ctx(ctx).Str("query", query).Interface("args", arg).Msg("NamedQueryContext query")
 	}
 	if c.tx != nil {
-		return c.tx.NamedQuery(query, arg)
+		return sqlx.NamedQueryContext(ctx, c.tx, query, arg)
 	}
 	return c.db.NamedQueryContext(ctx, query, arg)
 }

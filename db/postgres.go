@@ -12,6 +12,8 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.38.0"
 )
 
+const MaxQueryParams = 65534
+
 type PgConfig struct {
 	ApplicationName              string
 	Host                         string
