@@ -41,7 +41,7 @@ func TestPostgresConnection(t *testing.T) {
 	dbConfig := PgConfig{
 		ApplicationName: "test",
 		Host:            "localhost",
-		Port:            (uint32)(dbPort.Int()),
+		Port:            (uint32)(dbPort.Num()),
 		User:            dbUser,
 		Pass:            dbPass,
 		Database:        dbName,

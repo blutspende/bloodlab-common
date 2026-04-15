@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	_ "github.com/jackc/pgx/v4/stdlib" /* Postgres driver with "pgx" driver name */
+	_ "github.com/jackc/pgx/v5/stdlib" /* Postgres driver with "pgx" driver name */
 	"github.com/jmoiron/sqlx"
 	"github.com/rs/zerolog/log"
 	"go.nhat.io/otelsql"
