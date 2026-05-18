@@ -3,7 +3,7 @@ package db
 import (
 	"errors"
 
-	pgx "github.com/jackc/pgconn"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/lib/pq"
 )
 
@@ -27,7 +27,7 @@ func IsErrorCode(err error, errcode pq.ErrorCode) bool {
 		return pgErr.Code == errcode
 	}
 
-	pgxErr, ok := err.(*pgx.PgError)
+	pgxErr, ok := err.(*pgconn.PgError)
 	if ok {
 		currentCode := pq.ErrorCode(pgxErr.Code)
 		return currentCode == errcode
@@ -41,7 +41,7 @@ func TryCastErrorToPgError(err error) any {
 	if ok {
 		return pgErr
 	}
-	pgxErr, ok := err.(*pgx.PgError)
+	pgxErr, ok := err.(*pgconn.PgError)
 	if ok {
 		return pgxErr
 	}
