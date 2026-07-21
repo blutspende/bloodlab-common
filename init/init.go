@@ -25,15 +25,15 @@ func LoadDotEnvFile() error {
 	return nil
 }
 
-func ReadConfiguration(configuration *config.Configuration) error {
+func ReadConfiguration(configuration config.CommonConfigurationEmbedding) error {
 	return config.ReadConfiguration(configuration)
 }
 
-func ConfigureLogger(configuration *config.Configuration) {
+func ConfigureLogger(configuration config.CommonConfigurationEmbedding) {
 	consoleWriter := zerolog.NewConsoleWriter()
 	consoleWriter.TimeFormat = "2006-01-02T15:04:05Z07:00"
 	log.Logger = zerolog.New(consoleWriter).With().Caller().Stack().Timestamp().Logger()
-	zerolog.SetGlobalLevel(configuration.ZeroLogLevel)
+	zerolog.SetGlobalLevel(configuration.GetCommonConfig().ZeroLogLevel)
 }
 
 func InitGracefulShutdown() context.Context {
@@ -54,7 +54,7 @@ func InitGracefulShutdown() context.Context {
 	return ctx
 }
 
-func InitStartup(configuration *config.Configuration) (ctx context.Context, err error) {
+func InitStartup(configuration config.CommonConfigurationEmbedding) (ctx context.Context, err error) {
 	err = LoadDotEnvFile()
 	if err != nil {
 		return nil, err

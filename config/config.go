@@ -34,19 +34,25 @@ type Configuration struct {
 	ClientCredentialAuthHeaderValue string
 }
 
-func ReadConfiguration(configuration *Configuration) error {
+type CommonConfigurationEmbedding interface {
+	GetCommonConfig() *Configuration
+}
+
+func ReadConfiguration(configuration CommonConfigurationEmbedding) error {
 	err := envconfig.Process("", configuration)
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrFailedToReadConfiguration, err)
 	}
 
-	zeroLogLevel, err := ParseLogLevel(configuration.LogLevel)
+	commonConfig := configuration.GetCommonConfig()
+
+	zeroLogLevel, err := ParseLogLevel(commonConfig.LogLevel)
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrFailedToParseLogLevel, err)
 	}
-	configuration.ZeroLogLevel = zeroLogLevel
+	commonConfig.ZeroLogLevel = zeroLogLevel
 
-	configuration.ClientCredentialAuthHeaderValue = base64.StdEncoding.EncodeToString([]byte(configuration.ClientID + ":" + configuration.ClientSecret))
+	commonConfig.ClientCredentialAuthHeaderValue = base64.StdEncoding.EncodeToString([]byte(commonConfig.ClientID + ":" + commonConfig.ClientSecret))
 
 	return nil
 }
