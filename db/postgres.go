@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/blutspende/bloodlab-common/config"
 	_ "github.com/jackc/pgx/v5/stdlib" /* Postgres driver with "pgx" driver name */
 	"github.com/jmoiron/sqlx"
 	"github.com/rs/zerolog/log"
@@ -27,6 +28,18 @@ type PgConfig struct {
 	ConnectionMaxLifetimeSeconds *int
 	ConnectionMaxIdleTimeSeconds *int
 	UseOpenTelemetry             bool
+}
+
+func FillPgConfigBase(configuration config.Configuration) PgConfig {
+	return PgConfig{
+		ApplicationName: configuration.ApplicationName,
+		Host:            configuration.PostgresDB.Host,
+		Port:            configuration.PostgresDB.Port,
+		User:            configuration.PostgresDB.User,
+		Pass:            configuration.PostgresDB.Pass,
+		Database:        configuration.PostgresDB.Database,
+		SSLMode:         configuration.PostgresDB.SSLMode,
+	}
 }
 
 type Postgres interface {
