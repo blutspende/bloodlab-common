@@ -14,7 +14,7 @@ var ErrFailedToReadConfiguration = errors.New("failed to read configuration")
 var ErrFailedToParseLogLevel = errors.New("failed to parse log level")
 var ErrInvalidLogLevel = errors.New("invalid log level")
 
-type Configuration struct {
+type CommonConfiguration struct {
 	ApplicationName string `envconfig:"APPLICATION_NAME" required:"true"`
 
 	PostgresDB struct {
@@ -24,6 +24,14 @@ type Configuration struct {
 		Pass     string `envconfig:"DB_PASS" required:"true"`
 		Database string `envconfig:"DB_DATABASE" required:"true"`
 		SSLMode  string `envconfig:"DB_SSL_MODE" required:"true"`
+		// TODO: separate these into another type of common config with metrics or something
+		MaxOpenConnections           int  `envconfig:"DB_MAX_OPEN_CONNECTIONS" default:"8"`
+		MaxIdleConnections           int  `envconfig:"DB_MAX_IDLE_CONNECTIONS" default:"8"`
+		ConnectionMaxLifetimeSeconds int  `envconfig:"DB_CONNECTION_MAX_LIFETIME_SECONDS" default:"180"`
+		ConnectionMaxIdleTimeSeconds int  `envconfig:"DB_CONNECTION_MAX_IDLE_TIME_SECONDS" default:"30"`
+		EnableQueryLogging           bool `envconfig:"DB_QUERY_LOGGING" default:"false"`
+		// TODO: verify if this is a good idea
+		UseOpenTelemetry bool `envconfig:"DB_USE_OTEL" default:"false"`
 	}
 
 	LogLevel     string `envconfig:"LOG_LEVEL" default:"DEBUG"`
@@ -32,13 +40,48 @@ type Configuration struct {
 	ClientID                        string `envconfig:"CLIENT_ID" required:"true"`
 	ClientSecret                    string `envconfig:"CLIENT_SECRET" required:"true"`
 	ClientCredentialAuthHeaderValue string
+
+	OpenTelemetry struct {
+		Enable                       bool   `envconfig:"OTEL_ENABLE" default:"false"`
+		TraceCollectorEndpoint       string `envconfig:"OTEL_TRACE_COLLECTOR_ENDPOINT" default:"otel:4317"`
+		TraceCollectorTimeoutSeconds int    `envconfig:"OTEL_TRACE_COLLECTOR_TIMEOUT_SECONDS" default:"5"`
+		MetricsCollectorEndpoint     string `envconfig:"OTEL_METRICS_COLLECTOR_ENDPOINT" required:"false" default:"otel:4317"`
+		MetricsReaderTimeoutSeconds  int    `envconfig:"OTEL_METRICS_READER_TIMEOUT_SECONDS" default:"5"`
+		MetricsReaderIntervalSeconds int    `envconfig:"OTEL_METRICS_READER_INTERVAL_SECONDS" default:"15"`
+		ReadMemStatsIntervalSeconds  int    `envconfig:"OTEL_READ_MEMSTATS_INTERVAL_SECONDS" default:"30"`
+	}
+
+	Pyroscope struct {
+		Enable bool   `envconfig:"PYROSCOPE_ENABLE" default:"false"`
+		Server string `envconfig:"PYROSCOPE_SERVER" default:"http://localhost:4040"`
+	}
+
+	//TODO: decide what to do about optional Redis use
+	Redis struct {
+		Address                  string `envconfig:"REDIS_ADDRESS" default:"redis:6379"`
+		Password                 string `envconfig:"REDIS_PASSWORD" required:"true"`
+		DefaultTTLMinutes        int    `envconfig:"REDIS_DEFAULT_TTL_MINUTES" default:"1440"`
+		RefreshRetryAttempts     int    `envconfig:"REDIS_REFRESH_RETRY_ATTEMPTS" default:"5"`
+		RefreshRetryWaitStartMs  int    `envconfig:"REDIS_REFRESH_RETRY_WAIT_START_MS" default:"500"`
+		RefreshRetryWaitExponent int    `envconfig:"REDIS_REFRESH_RETRY_WAIT_EXPONENT" default:"5"`
+		MaxRetries               int    `envconfig:"REDIS_MAX_RETRIES" default:"-1"`
+		DialerRetries            int    `envconfig:"REDIS_DIALER_RETRIES" default:"1"`
+		DialerRetryTimeoutMs     int    `envconfig:"REDIS_DIALER_RETRY_TIMEOUT_MS" default:"50"`
+		CachingDisabled          bool   `envconfig:"REDIS_CACHING_DISABLED" default:"false"`
+		//TODO: decide if there could be a better way to enable/disable Redis
+		Enable bool `envconfig:"REDIS_ENABLE" default:"false"`
+	}
 }
 
-type CommonConfigurationEmbedding interface {
-	GetCommonConfig() *Configuration
+func (c *CommonConfiguration) GetCommonConfig() *CommonConfiguration {
+	return c
 }
 
-func ReadConfiguration(configuration CommonConfigurationEmbedding) error {
+type Configuration interface {
+	GetCommonConfig() *CommonConfiguration
+}
+
+func ReadConfiguration(configuration Configuration) error {
 	err := envconfig.Process("", configuration)
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrFailedToReadConfiguration, err)

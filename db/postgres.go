@@ -30,7 +30,8 @@ type PgConfig struct {
 	UseOpenTelemetry             bool
 }
 
-func FillPgConfigBase(configuration config.Configuration) PgConfig {
+// TODO: rethink this
+func FillPgConfigBase(configuration *config.CommonConfiguration) PgConfig {
 	return PgConfig{
 		ApplicationName: configuration.ApplicationName,
 		Host:            configuration.PostgresDB.Host,
@@ -103,6 +104,7 @@ func (p *postgres) Connect(ctx context.Context) (pgDB *sqlx.DB, err error) {
 	}
 	p.pgConn = pgDB
 	// Configure connection pool
+	// TODO: figure out if this would be a problem in skeleton or not
 	if p.config.MaxOpenConnections != nil {
 		pgDB.DB.SetMaxOpenConns(*p.config.MaxOpenConnections)
 	}

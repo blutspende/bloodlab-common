@@ -16,7 +16,7 @@ import (
 
 var ErrFailedToLoadDotEnvFile = errors.New("failed to load .env file")
 
-func LoadDotEnvFile() error {
+func loadDotEnvFile() error {
 	if err := godotenv.Load(); err != nil {
 		if !os.IsNotExist(err) {
 			return fmt.Errorf("%w: %w", ErrFailedToLoadDotEnvFile, err)
@@ -25,18 +25,14 @@ func LoadDotEnvFile() error {
 	return nil
 }
 
-func ReadConfiguration(configuration config.CommonConfigurationEmbedding) error {
-	return config.ReadConfiguration(configuration)
-}
-
-func ConfigureLogger(configuration config.CommonConfigurationEmbedding) {
+func configureLogger(configuration *config.CommonConfiguration) {
 	consoleWriter := zerolog.NewConsoleWriter()
 	consoleWriter.TimeFormat = "2006-01-02T15:04:05Z07:00"
 	log.Logger = zerolog.New(consoleWriter).With().Caller().Stack().Timestamp().Logger()
-	zerolog.SetGlobalLevel(configuration.GetCommonConfig().ZeroLogLevel)
+	zerolog.SetGlobalLevel(configuration.ZeroLogLevel)
 }
 
-func InitGracefulShutdown() context.Context {
+func initGracefulShutdown() context.Context {
 	// Init cancelable context for graceful shutdown
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
@@ -54,16 +50,20 @@ func InitGracefulShutdown() context.Context {
 	return ctx
 }
 
-func InitStartup(configuration config.CommonConfigurationEmbedding) (ctx context.Context, err error) {
-	err = LoadDotEnvFile()
+func Startup(configuration config.Configuration) (ctx context.Context, err error) {
+	err = loadDotEnvFile()
 	if err != nil {
 		return nil, err
 	}
-	err = ReadConfiguration(configuration)
+
+	err = config.ReadConfiguration(configuration)
 	if err != nil {
 		return nil, err
 	}
-	ConfigureLogger(configuration)
-	ctx = InitGracefulShutdown()
+
+	configureLogger(configuration.GetCommonConfig())
+
+	ctx = initGracefulShutdown()
+
 	return ctx, nil
 }
