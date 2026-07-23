@@ -3,16 +3,10 @@ package init
 import (
 	"context"
 	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"github.com/blutspende/bloodlab-common/config"
-	"github.com/blutspende/bloodlab-common/db"
 	"github.com/google/uuid"
-	"github.com/grafana/pyroscope-go"
-	"github.com/redis/go-redis/extra/redisotel/v9"
-	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/contrib/instrumentation/host"
@@ -41,13 +35,6 @@ func (h correlationIDHook) Run(e *zerolog.Event, level zerolog.Level, msg string
 	if cid, ok := ctx.Value(ContextKeyCorrelation).(string); ok && cid != "" {
 		e.Str("correlationID", cid)
 	}
-}
-
-func configureLoggerWithMetrics(configuration *config.CommonConfiguration) {
-	consoleWriter := zerolog.NewConsoleWriter()
-	consoleWriter.TimeFormat = "2006-01-02T15:04:05Z07:00"
-	log.Logger = zerolog.New(consoleWriter).Hook(correlationIDHook{}).With().Caller().Stack().Timestamp().Logger()
-	zerolog.SetGlobalLevel(configuration.ZeroLogLevel)
 }
 
 // Identify the current instance e.g. when running in a cluster the name of the pod
@@ -191,161 +178,4 @@ func initOpenTelemetry(buildVersion string, configuration *config.CommonConfigur
 	}
 
 	return tp, mp
-}
-
-func initGracefulShutdownWithMetrics(postgres db.Postgres, redisClient *redis.Client, tracer *trace.TracerProvider, metrics *metric.MeterProvider, profiler *pyroscope.Profiler) context.Context {
-	channel := make(chan os.Signal, 1)
-	signal.Notify(channel, os.Interrupt, os.Kill, syscall.SIGTERM) //nolint
-
-	// TODO: verify if using the same ctx for logs and as the cancellable return is ok
-	ctx, cancel := context.WithCancel(context.Background())
-
-	go func() {
-		osCall := <-channel
-		log.Info().Ctx(ctx).Msg("graceful shutdown initiated")
-		log.Info().Ctx(ctx).Msgf("system call:%+v\n", osCall)
-
-		log.Info().Ctx(ctx).Msg("canceling context")
-		cancel()
-
-		if postgres != nil {
-			log.Info().Ctx(ctx).Msg("closing DB connection")
-			err := postgres.Close()
-			if err != nil {
-				log.Error().Ctx(ctx).Err(err).Msg("failed to close DB connection")
-			}
-		}
-
-		if redisClient != nil {
-			log.Info().Ctx(ctx).Msg("closing Redis connection")
-			if err := redisClient.Close(); err != nil {
-				log.Error().Ctx(ctx).Err(err).Msg("failed to close Redis client")
-			}
-		}
-
-		if profiler != nil {
-			log.Info().Ctx(ctx).Msg("stopping Pyroscope profiler")
-			profiler.Stop()
-		}
-
-		if tracer != nil {
-			log.Info().Ctx(ctx).Msg("shutting down OpenTelemetry tracer")
-			err := tracer.Shutdown(ctx)
-			if err != nil {
-				log.Error().Ctx(ctx).Err(err).Msg("failed to shutdown OpenTelemetry tracer")
-			}
-		}
-		if metrics != nil {
-			log.Info().Ctx(ctx).Msg("shutting down OpenTelemetry meter")
-			err := metrics.Shutdown(ctx)
-			if err != nil {
-				log.Error().Ctx(ctx).Err(err).Msg("failed to shutdown OpenTelemetry meter")
-			}
-		}
-
-		log.Info().Ctx(ctx).Msg("shutting down")
-		os.Exit(0)
-	}()
-
-	return ctx
-}
-
-func StartupWithMetrics(configuration config.Configuration, buildVersion string) (ctx context.Context, err error) {
-	// .env
-	err = loadDotEnvFile()
-	if err != nil {
-		return nil, err
-	}
-
-	// Configuration
-	err = config.ReadConfiguration(configuration)
-
-	commonConfig := configuration.GetCommonConfig()
-
-	// Logger
-	if err != nil {
-		return nil, err
-	}
-	configureLoggerWithMetrics(commonConfig)
-
-	// Postgres db
-	dbConfig := db.PgConfig{
-		ApplicationName:              commonConfig.ApplicationName,
-		Host:                         commonConfig.PostgresDB.Host,
-		Port:                         commonConfig.PostgresDB.Port,
-		User:                         commonConfig.PostgresDB.User,
-		Pass:                         commonConfig.PostgresDB.Pass,
-		Database:                     commonConfig.PostgresDB.Database,
-		SSLMode:                      commonConfig.PostgresDB.SSLMode,
-		MaxOpenConnections:           new(commonConfig.PostgresDB.MaxOpenConnections),
-		MaxIdleConnections:           new(commonConfig.PostgresDB.MaxIdleConnections),
-		ConnectionMaxLifetimeSeconds: new(commonConfig.PostgresDB.ConnectionMaxLifetimeSeconds),
-		ConnectionMaxIdleTimeSeconds: new(commonConfig.PostgresDB.ConnectionMaxIdleTimeSeconds),
-		UseOpenTelemetry:             commonConfig.PostgresDB.UseOpenTelemetry,
-	}
-	postgres := db.NewPostgres(dbConfig)
-
-	// Redis client
-	var redisClient *redis.Client
-	if commonConfig.Redis.Enable {
-		redisClient = redis.NewClient(&redis.Options{
-			Addr:               commonConfig.Redis.Address,
-			Protocol:           2,
-			Password:           commonConfig.Redis.Password,
-			MaxRetries:         commonConfig.Redis.MaxRetries,
-			DialerRetries:      commonConfig.Redis.DialerRetries,
-			DialerRetryTimeout: time.Duration(commonConfig.Redis.DialerRetryTimeoutMs),
-		})
-		//defer redisClient.Close() //TODO: verify that this was stupid (graceful shutdown takes care of this)
-	}
-
-	// OpenTelemetry tracer and meter
-	var tracer *trace.TracerProvider
-	var metrics *metric.MeterProvider
-	if commonConfig.OpenTelemetry.Enable {
-		tracer, metrics = initOpenTelemetry(buildVersion, commonConfig)
-
-		if redisClient != nil {
-			if err = redisotel.InstrumentTracing(redisClient); err != nil {
-				log.Warn().Err(err).Msg("enable redis opentelemetry tracing failed")
-			}
-			if err = redisotel.InstrumentMetrics(redisClient); err != nil {
-				log.Warn().Err(err).Msg("enable redis opentelemetry metrics failed")
-			}
-		}
-	} else {
-		log.Warn().Msg("OpenTelemetry is disabled! This is not recommended for production systems.")
-	}
-
-	// Pyroscope Profiling (https://github.com/grafana/pyroscope)
-	var profiler *pyroscope.Profiler
-	if commonConfig.Pyroscope.Enable {
-		profiler, err = pyroscope.Start(pyroscope.Config{
-			ApplicationName: commonConfig.ApplicationName,
-			ServerAddress:   commonConfig.Pyroscope.Server,
-			Tags: map[string]string{
-				"service":  commonConfig.ApplicationName,
-				"instance": getInstanceID(),
-				"version":  buildVersion,
-			},
-			ProfileTypes: []pyroscope.ProfileType{
-				pyroscope.ProfileCPU,
-				pyroscope.ProfileAllocObjects,
-				pyroscope.ProfileAllocSpace,
-				pyroscope.ProfileInuseObjects,
-				pyroscope.ProfileInuseSpace,
-				//-- mutexes profiling is very expensive, use locally for troubleshooting
-				// pyroscope.ProfileMutexCount,
-				// pyroscope.ProfileMutexDuration,
-			},
-		})
-		if err != nil {
-			log.Warn().Err(err).Msg("Starting Pyroscope profiler failed! Continuing without Pyroscope profiling.")
-		}
-	}
-
-	// Graceful shutdown
-	ctx = initGracefulShutdownWithMetrics(postgres, redisClient, tracer, metrics, profiler)
-
-	return ctx, nil
 }
