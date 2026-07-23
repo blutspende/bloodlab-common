@@ -63,75 +63,56 @@ func configureLogger(configuration *config.CommonConfiguration, utc bool, hook z
 	zerolog.DefaultContextLogger = &log.Logger
 }
 
-/*
-func initGracefulShutdown() context.Context {
-	// Init cancelable context for graceful shutdown
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-	ctx, cancel := context.WithCancel(context.Background())
-
-	// Start wait with graceful shutdown in goroutine
-	go func() {
-		select {
-		case sig := <-sigChan:
-			log.Info().Msgf("received termination signal: %+v", sig)
-			log.Info().Msg("canceling context")
-			cancel() // Cancels the context for all goroutines
-		}
-	}()
-	// Return the cancellable context for use in the application
-	return ctx
-}
-*/
-
 func initGracefulShutdown(postgres db.Postgres, redisClient *redis.Client, tracer *trace.TracerProvider, metrics *metric.MeterProvider, profiler *pyroscope.Profiler, extensionFunc func()) context.Context {
 	// Init cancelable context for graceful shutdown
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, os.Kill, syscall.SIGTERM) //nolint
 
-	// TODO: verify if using the same ctx for logs and as the cancellable return is ok
 	ctx, cancel := context.WithCancel(context.Background())
 
 	go func() {
 		sig := <-sigChan
-		log.Info().Ctx(ctx).Msgf("received termination signal: %+v", sig)
-		log.Info().Ctx(ctx).Msg("graceful shutdown initiated")
+		log.Info().Msgf("received termination signal: %+v", sig)
+		log.Info().Msg("graceful shutdown initiated")
 
-		log.Info().Ctx(ctx).Msg("canceling context")
+		log.Info().Msg("canceling context")
 		cancel()
 
 		if postgres != nil {
-			log.Info().Ctx(ctx).Msg("closing DB connection")
+			log.Info().Msg("closing DB connection")
 			err := postgres.Close()
 			if err != nil {
-				log.Error().Ctx(ctx).Err(err).Msg("failed to close DB connection")
+				log.Error().Err(err).Msg("failed to close DB connection")
 			}
 		}
 
 		if redisClient != nil {
-			log.Info().Ctx(ctx).Msg("closing Redis connection")
+			log.Info().Msg("closing Redis connection")
 			if err := redisClient.Close(); err != nil {
-				log.Error().Ctx(ctx).Err(err).Msg("failed to close Redis client")
+				log.Error().Err(err).Msg("failed to close Redis client")
 			}
 		}
 
 		if profiler != nil {
-			log.Info().Ctx(ctx).Msg("stopping Pyroscope profiler")
-			profiler.Stop()
+			log.Info().Msg("stopping Pyroscope profiler")
+			err := profiler.Stop()
+			if err != nil {
+				log.Error().Err(err).Msg("failed to shutdown Pyroscope profiler")
+			}
 		}
 
 		if tracer != nil {
-			log.Info().Ctx(ctx).Msg("shutting down OpenTelemetry tracer")
-			err := tracer.Shutdown(ctx)
+			log.Info().Msg("shutting down OpenTelemetry tracer")
+			err := tracer.Shutdown(context.Background())
 			if err != nil {
-				log.Error().Ctx(ctx).Err(err).Msg("failed to shutdown OpenTelemetry tracer")
+				log.Error().Err(err).Msg("failed to shutdown OpenTelemetry tracer")
 			}
 		}
 		if metrics != nil {
-			log.Info().Ctx(ctx).Msg("shutting down OpenTelemetry meter")
-			err := metrics.Shutdown(ctx)
+			log.Info().Msg("shutting down OpenTelemetry meter")
+			err := metrics.Shutdown(context.Background())
 			if err != nil {
-				log.Error().Ctx(ctx).Err(err).Msg("failed to shutdown OpenTelemetry meter")
+				log.Error().Err(err).Msg("failed to shutdown OpenTelemetry meter")
 			}
 		}
 
@@ -139,7 +120,7 @@ func initGracefulShutdown(postgres db.Postgres, redisClient *redis.Client, trace
 			extensionFunc()
 		}
 
-		log.Info().Ctx(ctx).Msg("shutting down")
+		log.Info().Msg("shutting down")
 		os.Exit(0)
 	}()
 

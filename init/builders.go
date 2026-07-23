@@ -30,6 +30,8 @@ func buildPostgres(commonConfig *config.CommonConfiguration) db.Postgres {
 		UseOpenTelemetry:             commonConfig.PostgresDB.UseOpenTelemetry,
 	}
 	return db.NewPostgres(dbConfig)
+
+	//TODO: connect to db, and rethink return value(s)
 }
 
 func buildRedis(commonConfig *config.CommonConfiguration) (redisClient *redis.Client) {

@@ -8,6 +8,7 @@ import (
 	"github.com/grafana/pyroscope-go"
 	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/trace"
 )
@@ -18,6 +19,7 @@ type StartupConfig struct {
 	UsePostgres           bool
 	UseRedis              bool
 	UseOtel               bool
+	UsePyroscope          bool
 	UtcLogging            bool
 	startupExtensionFunc  func(config.Configuration) error
 	shutdownExtensionFunc func()
@@ -45,6 +47,9 @@ func Startup(cfg StartupConfig) (ctx context.Context, postgres db.Postgres,
 	}
 	configureLogger(commonConfig, cfg.UtcLogging, hook)
 
+	// Log startup
+	log.Info().Msgf("%s - starting...", commonConfig.ApplicationName)
+
 	// Postgres
 	if cfg.UsePostgres {
 		postgres = buildPostgres(commonConfig)
@@ -64,7 +69,7 @@ func Startup(cfg StartupConfig) (ctx context.Context, postgres db.Postgres,
 
 	// Pyroscope
 	var profiler *pyroscope.Profiler
-	if cfg.UseOtel {
+	if cfg.UsePyroscope {
 		profiler = buildPyroscope(commonConfig, cfg.buildVersion)
 	}
 

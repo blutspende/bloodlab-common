@@ -52,11 +52,6 @@ func getInstanceID() string {
 //
 //	traceCollectorEndpoint: host:port of the OTLP trace collector
 //	metricsCollectorEndpoint: host:port of the OTLP metrics collector
-//
-// TODO: verify changes (based on Cerberus implementation)
-// - ctx provided externally (same as the cancellable context as used now)
-// - instanceID moved from parameter to internally calling getInstanceID instead of at func call
-// - configuration parameters directly accessed from config instead of passing them 1by1
 func initOpenTelemetry(buildVersion string, configuration *config.CommonConfiguration) (tp *trace.TracerProvider, mp *metric.MeterProvider) {
 	ctx := context.Background()
 
@@ -71,7 +66,6 @@ func initOpenTelemetry(buildVersion string, configuration *config.CommonConfigur
 		),
 	)
 	if err != nil {
-		// TODO: verify: text changed to "without"
 		log.Warn().Err(err).Msg("initialize resource for OpenTelemetry failed: continuing without OpenTelemetry...")
 		return nil, nil
 	}
@@ -127,7 +121,6 @@ func initOpenTelemetry(buildVersion string, configuration *config.CommonConfigur
 						metric.WithTimeout(time.Duration(configuration.OpenTelemetry.MetricsReaderTimeoutSeconds)*time.Second),
 					),
 				),
-				// TODO: verify: sdkmetric changed to metric (it was the same package import)
 				metric.WithView(
 					metric.NewView(
 						metric.Instrument{
@@ -150,7 +143,7 @@ func initOpenTelemetry(buildVersion string, configuration *config.CommonConfigur
 					),
 				),
 
-				//--  runtime metrics (GC, Goroutines, Heap, Stack)
+				//-- runtime metrics (GC, Goroutines, Heap, Stack)
 				metric.WithView(
 					metric.NewView(
 						metric.Instrument{
