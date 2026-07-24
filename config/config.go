@@ -18,18 +18,18 @@ type CommonConfiguration struct {
 	ApplicationName string `envconfig:"APPLICATION_NAME" required:"true"`
 
 	PostgresDB struct {
-		Host     string `envconfig:"DB_SERVER" required:"true"`
-		Port     uint32 `envconfig:"DB_PORT" required:"true"`
-		User     string `envconfig:"DB_USER" required:"true"`
-		Pass     string `envconfig:"DB_PASS" required:"true"`
-		Database string `envconfig:"DB_DATABASE" required:"true"`
-		SSLMode  string `envconfig:"DB_SSL_MODE" required:"true"`
+		Host               string `envconfig:"DB_SERVER" required:"true"`
+		Port               uint32 `envconfig:"DB_PORT" required:"true"`
+		User               string `envconfig:"DB_USER" required:"true"`
+		Pass               string `envconfig:"DB_PASS" required:"true"`
+		Database           string `envconfig:"DB_DATABASE" required:"true"`
+		SSLMode            string `envconfig:"DB_SSL_MODE" required:"true"`
+		EnableQueryLogging bool   `envconfig:"DB_QUERY_LOGGING" default:"false"`
 		// Extended settings
 		MaxOpenConnections           int  `envconfig:"DB_MAX_OPEN_CONNECTIONS" default:"8"`
 		MaxIdleConnections           int  `envconfig:"DB_MAX_IDLE_CONNECTIONS" default:"8"`
 		ConnectionMaxLifetimeSeconds int  `envconfig:"DB_CONNECTION_MAX_LIFETIME_SECONDS" default:"180"`
 		ConnectionMaxIdleTimeSeconds int  `envconfig:"DB_CONNECTION_MAX_IDLE_TIME_SECONDS" default:"30"`
-		EnableQueryLogging           bool `envconfig:"DB_QUERY_LOGGING" default:"false"`
 		UseOpenTelemetry             bool `envconfig:"DB_USE_OTEL" default:"false"`
 	}
 

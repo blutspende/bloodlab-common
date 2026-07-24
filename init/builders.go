@@ -46,6 +46,10 @@ func buildPostgres(commonConfig *config.CommonConfiguration, extendedConfig bool
 
 	dbConn = db.NewDbConnection(sqlConn)
 
+	if commonConfig.PostgresDB.EnableQueryLogging {
+		dbConn.EnableQueryLogging()
+	}
+
 	return
 }
 
