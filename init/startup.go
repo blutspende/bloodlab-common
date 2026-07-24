@@ -17,6 +17,7 @@ type StartupConfig struct {
 	configuration         config.Configuration
 	buildVersion          string
 	UsePostgres           bool
+	UseExtendedPgConfig   bool
 	UseRedis              bool
 	UseOtel               bool
 	UsePyroscope          bool
@@ -25,7 +26,7 @@ type StartupConfig struct {
 	shutdownExtensionFunc func()
 }
 
-func Startup(cfg StartupConfig) (ctx context.Context, postgres db.Postgres,
+func Startup(cfg StartupConfig) (ctx context.Context, dbConn db.DbConnection,
 	redisClient *redis.Client, err error) {
 	// .env
 	err = loadDotEnvFile()
@@ -51,8 +52,9 @@ func Startup(cfg StartupConfig) (ctx context.Context, postgres db.Postgres,
 	log.Info().Msgf("%s - starting...", commonConfig.ApplicationName)
 
 	// Postgres
+	var postgres db.Postgres
 	if cfg.UsePostgres {
-		postgres = buildPostgres(commonConfig)
+		postgres, dbConn = buildPostgres(commonConfig, cfg.UseExtendedPgConfig)
 	}
 
 	// Redis

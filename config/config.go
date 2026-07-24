@@ -24,21 +24,20 @@ type CommonConfiguration struct {
 		Pass     string `envconfig:"DB_PASS" required:"true"`
 		Database string `envconfig:"DB_DATABASE" required:"true"`
 		SSLMode  string `envconfig:"DB_SSL_MODE" required:"true"`
-		// TODO: separate these into another type of common config with metrics or something
+		// Extended settings
 		MaxOpenConnections           int  `envconfig:"DB_MAX_OPEN_CONNECTIONS" default:"8"`
 		MaxIdleConnections           int  `envconfig:"DB_MAX_IDLE_CONNECTIONS" default:"8"`
 		ConnectionMaxLifetimeSeconds int  `envconfig:"DB_CONNECTION_MAX_LIFETIME_SECONDS" default:"180"`
 		ConnectionMaxIdleTimeSeconds int  `envconfig:"DB_CONNECTION_MAX_IDLE_TIME_SECONDS" default:"30"`
 		EnableQueryLogging           bool `envconfig:"DB_QUERY_LOGGING" default:"false"`
-		// TODO: verify if this is a good idea
-		UseOpenTelemetry bool `envconfig:"DB_USE_OTEL" default:"false"`
+		UseOpenTelemetry             bool `envconfig:"DB_USE_OTEL" default:"false"`
 	}
 
 	LogLevel     string `envconfig:"LOG_LEVEL" default:"DEBUG"`
 	ZeroLogLevel zerolog.Level
 
-	ClientID                        string `envconfig:"CLIENT_ID" required:"true"`
-	ClientSecret                    string `envconfig:"CLIENT_SECRET" required:"true"`
+	ClientID                        string `envconfig:"CLIENT_ID" default:""`
+	ClientSecret                    string `envconfig:"CLIENT_SECRET" default:""`
 	ClientCredentialAuthHeaderValue string
 
 	OpenTelemetry struct {
@@ -56,10 +55,11 @@ type CommonConfiguration struct {
 		Server string `envconfig:"PYROSCOPE_SERVER" default:"http://localhost:4040"`
 	}
 
-	//TODO: decide what to do about optional Redis use
 	Redis struct {
+		Enable                   bool   `envconfig:"REDIS_ENABLE" default:"false"`
 		Address                  string `envconfig:"REDIS_ADDRESS" default:"redis:6379"`
-		Password                 string `envconfig:"REDIS_PASSWORD" required:"true"`
+		Password                 string `envconfig:"REDIS_PASSWORD" default:""`
+		Database                 int    `envconfig:"REDIS_DATABASE" default:"1"`
 		DefaultTTLMinutes        int    `envconfig:"REDIS_DEFAULT_TTL_MINUTES" default:"1440"`
 		RefreshRetryAttempts     int    `envconfig:"REDIS_REFRESH_RETRY_ATTEMPTS" default:"5"`
 		RefreshRetryWaitStartMs  int    `envconfig:"REDIS_REFRESH_RETRY_WAIT_START_MS" default:"500"`
@@ -68,8 +68,6 @@ type CommonConfiguration struct {
 		DialerRetries            int    `envconfig:"REDIS_DIALER_RETRIES" default:"1"`
 		DialerRetryTimeoutMs     int    `envconfig:"REDIS_DIALER_RETRY_TIMEOUT_MS" default:"50"`
 		CachingDisabled          bool   `envconfig:"REDIS_CACHING_DISABLED" default:"false"`
-		//TODO: decide if there could be a better way to enable/disable Redis
-		Enable bool `envconfig:"REDIS_ENABLE" default:"false"`
 	}
 }
 

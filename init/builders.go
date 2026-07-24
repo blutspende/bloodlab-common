@@ -1,6 +1,8 @@
 package init
 
 import (
+	"context"
+	"fmt"
 	"time"
 
 	"github.com/blutspende/bloodlab-common/config"
@@ -13,7 +15,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
-func buildPostgres(commonConfig *config.CommonConfiguration) db.Postgres {
+func buildPostgres(commonConfig *config.CommonConfiguration, extendedConfig bool) (postgres db.Postgres, dbConn db.DbConnection) {
 	dbConfig := db.PgConfig{
 		ApplicationName: commonConfig.ApplicationName,
 		Host:            commonConfig.PostgresDB.Host,
@@ -22,16 +24,29 @@ func buildPostgres(commonConfig *config.CommonConfiguration) db.Postgres {
 		Pass:            commonConfig.PostgresDB.Pass,
 		Database:        commonConfig.PostgresDB.Database,
 		SSLMode:         commonConfig.PostgresDB.SSLMode,
-		// TODO: solve the optional addition of these
-		MaxOpenConnections:           new(commonConfig.PostgresDB.MaxOpenConnections),
-		MaxIdleConnections:           new(commonConfig.PostgresDB.MaxIdleConnections),
-		ConnectionMaxLifetimeSeconds: new(commonConfig.PostgresDB.ConnectionMaxLifetimeSeconds),
-		ConnectionMaxIdleTimeSeconds: new(commonConfig.PostgresDB.ConnectionMaxIdleTimeSeconds),
-		UseOpenTelemetry:             commonConfig.PostgresDB.UseOpenTelemetry,
 	}
-	return db.NewPostgres(dbConfig)
+	if extendedConfig {
+		dbConfig.MaxOpenConnections = new(commonConfig.PostgresDB.MaxOpenConnections)
+		dbConfig.MaxIdleConnections = new(commonConfig.PostgresDB.MaxIdleConnections)
+		dbConfig.ConnectionMaxLifetimeSeconds = new(commonConfig.PostgresDB.ConnectionMaxLifetimeSeconds)
+		dbConfig.ConnectionMaxIdleTimeSeconds = new(commonConfig.PostgresDB.ConnectionMaxIdleTimeSeconds)
+		dbConfig.UseOpenTelemetry = commonConfig.PostgresDB.UseOpenTelemetry
+	}
 
-	//TODO: connect to db, and rethink return value(s)
+	postgres = db.NewPostgres(dbConfig)
+
+	sqlConn, err := postgres.Connect(context.Background())
+	if err != nil {
+		log.Fatal().
+			Err(err).
+			Str("url", fmt.Sprintf("%s:%d", commonConfig.PostgresDB.Host, commonConfig.PostgresDB.Port)).
+			Str("user", commonConfig.PostgresDB.User).
+			Msg("unable to connect to postgres")
+	}
+
+	dbConn = db.NewDbConnection(sqlConn)
+
+	return
 }
 
 func buildRedis(commonConfig *config.CommonConfiguration) (redisClient *redis.Client) {
@@ -40,6 +55,7 @@ func buildRedis(commonConfig *config.CommonConfiguration) (redisClient *redis.Cl
 			Addr:               commonConfig.Redis.Address,
 			Protocol:           2,
 			Password:           commonConfig.Redis.Password,
+			DB:                 commonConfig.Redis.Database,
 			MaxRetries:         commonConfig.Redis.MaxRetries,
 			DialerRetries:      commonConfig.Redis.DialerRetries,
 			DialerRetryTimeout: time.Duration(commonConfig.Redis.DialerRetryTimeoutMs),
