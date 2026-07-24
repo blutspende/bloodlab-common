@@ -14,16 +14,16 @@ import (
 )
 
 type StartupConfig struct {
-	configuration         config.Configuration
-	buildVersion          string
+	Configuration         config.Configuration
+	BuildVersion          string
 	UsePostgres           bool
 	UseExtendedPgConfig   bool
 	UseRedis              bool
 	UseOtel               bool
 	UsePyroscope          bool
 	UtcLogging            bool
-	startupExtensionFunc  func(config.Configuration) error
-	shutdownExtensionFunc func()
+	StartupExtensionFunc  func(config.Configuration) error
+	ShutdownExtensionFunc func()
 }
 
 func Startup(cfg StartupConfig) (ctx context.Context, dbConn db.DbConnection,
@@ -35,11 +35,11 @@ func Startup(cfg StartupConfig) (ctx context.Context, dbConn db.DbConnection,
 	}
 
 	// Configuration
-	err = config.ReadConfiguration(cfg.configuration)
+	err = config.ReadConfiguration(cfg.Configuration)
 	if err != nil {
 		return
 	}
-	commonConfig := cfg.configuration.GetCommonConfig()
+	commonConfig := cfg.Configuration.GetCommonConfig()
 
 	// Logger
 	var hook zerolog.Hook
@@ -66,23 +66,23 @@ func Startup(cfg StartupConfig) (ctx context.Context, dbConn db.DbConnection,
 	var tracer *trace.TracerProvider
 	var metrics *metric.MeterProvider
 	if cfg.UseOtel {
-		tracer, metrics = buildOtel(commonConfig, cfg.buildVersion, redisClient)
+		tracer, metrics = buildOtel(commonConfig, cfg.BuildVersion, redisClient)
 	}
 
 	// Pyroscope
 	var profiler *pyroscope.Profiler
 	if cfg.UsePyroscope {
-		profiler = buildPyroscope(commonConfig, cfg.buildVersion)
+		profiler = buildPyroscope(commonConfig, cfg.BuildVersion)
 	}
 
 	// Extension function
-	err = cfg.startupExtensionFunc(cfg.configuration)
+	err = cfg.StartupExtensionFunc(cfg.Configuration)
 	if err != nil {
 		return
 	}
 
 	// Graceful shutdown
-	ctx = initGracefulShutdown(postgres, redisClient, tracer, metrics, profiler, cfg.shutdownExtensionFunc)
+	ctx = initGracefulShutdown(postgres, redisClient, tracer, metrics, profiler, cfg.ShutdownExtensionFunc)
 
 	// Return everything
 	return
