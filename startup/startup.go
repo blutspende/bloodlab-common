@@ -76,9 +76,11 @@ func Startup(cfg Config) (ctx context.Context, dbConn db.DbConnection,
 	}
 
 	// Extension function
-	err = cfg.StartupExtensionFunc(cfg.Configuration)
-	if err != nil {
-		return
+	if cfg.StartupExtensionFunc != nil {
+		err = cfg.StartupExtensionFunc(cfg.Configuration)
+		if err != nil {
+			return
+		}
 	}
 
 	// Graceful shutdown
