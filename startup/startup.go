@@ -1,4 +1,4 @@
-package init
+package startup
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
-type StartupConfig struct {
+type Config struct {
 	Configuration         config.Configuration
 	BuildVersion          string
 	UsePostgres           bool
@@ -26,7 +26,7 @@ type StartupConfig struct {
 	ShutdownExtensionFunc func()
 }
 
-func Startup(cfg StartupConfig) (ctx context.Context, dbConn db.DbConnection,
+func Startup(cfg Config) (ctx context.Context, dbConn db.DbConnection,
 	redisClient *redis.Client, err error) {
 	// .env
 	err = loadDotEnvFile()
