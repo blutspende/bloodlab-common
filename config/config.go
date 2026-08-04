@@ -33,11 +33,11 @@ type CommonConfiguration struct {
 		UseOpenTelemetry             bool `envconfig:"DB_USE_OTEL" default:"false"`
 	}
 
-	LogLevel     string `envconfig:"LOG_LEVEL" default:"DEBUG"`
+	LogLevel     string `envconfig:"LOG_LEVEL" default:"INFO"`
 	ZeroLogLevel zerolog.Level
 
-	ClientID                        string `envconfig:"CLIENT_ID" default:""`
-	ClientSecret                    string `envconfig:"CLIENT_SECRET" default:""`
+	ClientID                        string `envconfig:"CLIENT_ID" required:"true"`
+	ClientSecret                    string `envconfig:"CLIENT_SECRET" required:"true"`
 	ClientCredentialAuthHeaderValue string
 
 	OpenTelemetry struct {
@@ -52,7 +52,7 @@ type CommonConfiguration struct {
 
 	Pyroscope struct {
 		Enable bool   `envconfig:"PYROSCOPE_ENABLE" default:"false"`
-		Server string `envconfig:"PYROSCOPE_SERVER" default:"http://localhost:4040"`
+		Server string `envconfig:"PYROSCOPE_SERVER" default:"http://pyroscope:4040"`
 	}
 
 	Redis struct {
