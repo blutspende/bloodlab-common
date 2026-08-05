@@ -44,7 +44,7 @@ type CommonConfiguration struct {
 		Enable                   bool   `envconfig:"REDIS_ENABLE" default:"false"`
 		Address                  string `envconfig:"REDIS_ADDRESS" default:"redis:6379"`
 		Password                 string `envconfig:"REDIS_PASSWORD" default:""`
-		Database                 int    `envconfig:"REDIS_DATABASE" default:"1"`
+		Database                 int    `envconfig:"REDIS_DATABASE" default:"0"`
 		DefaultTTLMinutes        int    `envconfig:"REDIS_DEFAULT_TTL_MINUTES" default:"1440"`
 		RefreshRetryAttempts     int    `envconfig:"REDIS_REFRESH_RETRY_ATTEMPTS" default:"5"`
 		RefreshRetryWaitStartMs  int    `envconfig:"REDIS_REFRESH_RETRY_WAIT_START_MS" default:"500"`
