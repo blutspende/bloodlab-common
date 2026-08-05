@@ -99,6 +99,28 @@ Additionally, there is a helper function for custom keys involving UUIDs. It is 
 GuidToString(id uuid.UUID) string
 ```
 
+# Config
+`github.com/blutspende/bloodlab-common/config`
+
+Contains a base `CommonConfiguration` struct that can be embedded in other configuration structs to provide common configuration values, and a `ReadConfiguration` function to read environment variables and do basic common processing.
+
+It also contains a `Configuration` interface that should be implemented by any service specific configuration struct to be usable in `ReadConfiguration` and in various things from the `startup` package.
+
+Here is an example of a service specific configuration struct:
+```go
+import commonconfig "github.com/blutspende/bloodlab-common/config"
+
+type Configuration struct {
+    commonconfig.CommonConfiguration
+	
+    ServiceSpecific string `envconfig:"SERVICE_SPECIFIC" required:"true"`
+}
+
+func (c *Configuration) GetCommonConfig() *commonconfig.CommonConfiguration {
+    return &c.CommonConfiguration
+}
+```
+
 # Db
 `github.com/blutspende/bloodlab-common/db`
 
@@ -159,6 +181,14 @@ Contains common enum and type definitions related to instruments.
 Contains pagination related structs, helpers, and constants.
 `TotalPages` should always be used to calculate total pages based on total items and page size to make sure consistent behavior.
 `StandardisePaginatedQuery` should be used to standardize pagination values. It makes sure that page size is one of the allowed sizes, and page number is not negative. `StandardPageSizes` and `ValidPageSizes` can also be used for validation.
+
+# Startup
+`github.com/blutspende/bloodlab-common/startup`
+Contains startup related structs, helpers, and can be used to handle the startup and shutdown of a service.
+It is a fully configurable drop-in replacement for most of the boilerplate code in the `main()` function. It handles .env and configuration reading, database connection, initializations, and graceful shutdown.
+
+It can be configured using the `startup.Config` struct, and used with the `startup.Startup(cfg)` method. The configuration allows for optional injection of custom initialization and shutdown functions.
+
 
 # Timezone
 `github.com/blutspende/bloodlab-common/timezone`

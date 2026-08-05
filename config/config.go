@@ -40,6 +40,20 @@ type CommonConfiguration struct {
 	ClientSecret                    string `envconfig:"CLIENT_SECRET" required:"true"`
 	ClientCredentialAuthHeaderValue string
 
+	Redis struct {
+		Enable                   bool   `envconfig:"REDIS_ENABLE" default:"false"`
+		Address                  string `envconfig:"REDIS_ADDRESS" default:"redis:6379"`
+		Password                 string `envconfig:"REDIS_PASSWORD" default:""`
+		Database                 int    `envconfig:"REDIS_DATABASE" default:"1"`
+		DefaultTTLMinutes        int    `envconfig:"REDIS_DEFAULT_TTL_MINUTES" default:"1440"`
+		RefreshRetryAttempts     int    `envconfig:"REDIS_REFRESH_RETRY_ATTEMPTS" default:"5"`
+		RefreshRetryWaitStartMs  int    `envconfig:"REDIS_REFRESH_RETRY_WAIT_START_MS" default:"500"`
+		RefreshRetryWaitExponent int    `envconfig:"REDIS_REFRESH_RETRY_WAIT_EXPONENT" default:"5"`
+		MaxRetries               int    `envconfig:"REDIS_MAX_RETRIES" default:"-1"`
+		DialerRetries            int    `envconfig:"REDIS_DIALER_RETRIES" default:"1"`
+		DialerRetryTimeoutMs     int    `envconfig:"REDIS_DIALER_RETRY_TIMEOUT_MS" default:"50"`
+	}
+
 	OpenTelemetry struct {
 		Enable                       bool   `envconfig:"OTEL_ENABLE" default:"false"`
 		TraceCollectorEndpoint       string `envconfig:"OTEL_TRACE_COLLECTOR_ENDPOINT" default:"otel:4317"`
@@ -53,21 +67,6 @@ type CommonConfiguration struct {
 	Pyroscope struct {
 		Enable bool   `envconfig:"PYROSCOPE_ENABLE" default:"false"`
 		Server string `envconfig:"PYROSCOPE_SERVER" default:"http://pyroscope:4040"`
-	}
-
-	Redis struct {
-		Enable                   bool   `envconfig:"REDIS_ENABLE" default:"false"`
-		Address                  string `envconfig:"REDIS_ADDRESS" default:"redis:6379"`
-		Password                 string `envconfig:"REDIS_PASSWORD" default:""`
-		Database                 int    `envconfig:"REDIS_DATABASE" default:"1"`
-		DefaultTTLMinutes        int    `envconfig:"REDIS_DEFAULT_TTL_MINUTES" default:"1440"`
-		RefreshRetryAttempts     int    `envconfig:"REDIS_REFRESH_RETRY_ATTEMPTS" default:"5"`
-		RefreshRetryWaitStartMs  int    `envconfig:"REDIS_REFRESH_RETRY_WAIT_START_MS" default:"500"`
-		RefreshRetryWaitExponent int    `envconfig:"REDIS_REFRESH_RETRY_WAIT_EXPONENT" default:"5"`
-		MaxRetries               int    `envconfig:"REDIS_MAX_RETRIES" default:"-1"`
-		DialerRetries            int    `envconfig:"REDIS_DIALER_RETRIES" default:"1"`
-		DialerRetryTimeoutMs     int    `envconfig:"REDIS_DIALER_RETRY_TIMEOUT_MS" default:"50"`
-		CachingDisabled          bool   `envconfig:"REDIS_CACHING_DISABLED" default:"false"`
 	}
 }
 
@@ -87,7 +86,7 @@ func ReadConfiguration(configuration Configuration) error {
 
 	commonConfig := configuration.GetCommonConfig()
 
-	zeroLogLevel, err := ParseLogLevel(commonConfig.LogLevel)
+	zeroLogLevel, err := parseLogLevel(commonConfig.LogLevel)
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrFailedToParseLogLevel, err)
 	}
@@ -98,7 +97,7 @@ func ReadConfiguration(configuration Configuration) error {
 	return nil
 }
 
-func ParseLogLevel(logLevel string) (zeroLogLevel zerolog.Level, err error) {
+func parseLogLevel(logLevel string) (zeroLogLevel zerolog.Level, err error) {
 	switch strings.ToUpper(logLevel) {
 	case "TRACE":
 		zeroLogLevel = zerolog.TraceLevel
