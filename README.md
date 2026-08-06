@@ -12,10 +12,11 @@ Contains the `RedisCache` class for easy interaction with Redis. It is a fully i
 ### New
 A new instance can be created calling `NewRedisCache`:
 ```go
-func NewRedisCache(redisClient *redis.Client, name string) RedisCache
+func NewRedisCache(redisClient *redis.Client, appName, cacheName string) RedisCache
 ```
-It requires a pre-configured `*redis.Client` from the `github.com/redis/go-redis/v9` package, and a name for the cache instance.
-It is important that the name is unique for each service instantiating RedisCache, as it is used as a prefix for all keys stored in the cache.
+It requires a pre-configured `*redis.Client` from the `github.com/redis/go-redis/v9` package, and the application name and a name of the cache instance.
+It is important that the names are unique for each service instantiating RedisCache to avoid collisions, as it is used as a combination `appName:cacheName` to prefix all keys stored in the cache.
+Avoid using spaces or underscores in the names, as they are not allowed in Redis keys. Dashes are allowed.
 
 ### Init
 After creating the `Init` method should be called to initialize the cache.
@@ -94,9 +95,12 @@ KeyForCustom(customKey string) string
 KeyForValuedCustom(name string, values ...string) string
 KeyForNotFound() string
 ```
-Additionally, there is a helper function for custom keys involving UUIDs. It is important to use it because regular UUID to string conversion uses dashes, which are not allowed in Redis keys.
+
+### Helper functions
+Additional helper functions are provided for key formatting. It is ill-advised in Redis to use dashes `-`, spaces and special characters in keys. It should also be all lower case as per convention. UUIDs naturally have dashes, so they should be reformatted. Application and cache names should also be normalized. For this these two helper functions are provided, and they should be used whenever a name is not made sure to be compliant as is.
 ```go
-GuidToString(id uuid.UUID) string
+GuidToKey(id uuid.UUID) string
+NameToKey(name string) string
 ```
 
 # Config
