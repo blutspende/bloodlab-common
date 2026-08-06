@@ -73,7 +73,7 @@ type redisCache struct {
 func NewRedisCache(redisClient *redis.Client, appName, cacheName string) RedisCache {
 	return &redisCache{
 		redisClient:          redisClient,
-		name:                 fmt.Sprintf("%s:%s", appName, cacheName),
+		name:                 fmt.Sprintf("%s:%s", NameToKey(appName), NameToKey(cacheName)),
 		refreshMutex:         &sync.Mutex{},
 		rnd:                  *rand.New(rand.NewSource(time.Now().UnixNano())),
 		cacheValid:           false,
@@ -746,7 +746,6 @@ func NameToKey(name string) string {
 	return normalizeKey(name)
 }
 func normalizeKey(s string) string {
-	s = strings.ToLower(s)
 	s = strings.TrimSpace(s)
 	replacer := strings.NewReplacer(
 		" ", "_",
@@ -756,7 +755,7 @@ func normalizeKey(s string) string {
 		".", "_",
 	)
 	s = replacer.Replace(s)
-	re := regexp.MustCompile(`[^a-z0-9_]`)
+	re := regexp.MustCompile(`[^a-zA-Z0-9_]`)
 	s = re.ReplaceAllString(s, "")
 	return s
 }

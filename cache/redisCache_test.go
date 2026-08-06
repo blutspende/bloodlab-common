@@ -87,5 +87,5 @@ func TestGuidToKey(t *testing.T) {
 
 func TestNameToKey(t *testing.T) {
 	key := NameToKey("NON standard-Name With% 1")
-	assert.Equal(t, "non_standard_name_with_1", key)
+	assert.Equal(t, "NON_standard_Name_With_1", key)
 }
