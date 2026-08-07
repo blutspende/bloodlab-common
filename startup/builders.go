@@ -59,7 +59,6 @@ func buildRedis(commonConfig *config.CommonConfiguration) (redisClient *redis.Cl
 			Addr:               commonConfig.Redis.Address,
 			Protocol:           2,
 			Password:           commonConfig.Redis.Password,
-			DB:                 commonConfig.Redis.Database,
 			MaxRetries:         commonConfig.Redis.MaxRetries,
 			DialerRetries:      commonConfig.Redis.DialerRetries,
 			DialerRetryTimeout: time.Duration(commonConfig.Redis.DialerRetryTimeoutMs),
