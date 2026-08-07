@@ -104,9 +104,6 @@ func buildPyroscope(commonConfig *config.CommonConfiguration, buildVersion strin
 				pyroscope.ProfileAllocSpace,
 				pyroscope.ProfileInuseObjects,
 				pyroscope.ProfileInuseSpace,
-				//-- mutexes profiling is very expensive, use locally for troubleshooting
-				// pyroscope.ProfileMutexCount,
-				// pyroscope.ProfileMutexDuration,
 			},
 		})
 		if err != nil {

@@ -81,10 +81,6 @@ func initOpenTelemetry(buildVersion string, configuration *config.CommonConfigur
 		if err != nil {
 			log.Warn().Err(err).Msg("initialize OpenTelemetry traces failed. Continuing with OpenTelemetry traces...")
 		} else {
-			// TODO: these 2 lines come from Lablink, do we need them?
-			spanLimits := trace.NewSpanLimits()
-			spanLimits.AttributeValueLengthLimit = -1
-
 			tp = trace.NewTracerProvider(
 				trace.WithBatcher(exp,
 					trace.WithMaxQueueSize(2048),
