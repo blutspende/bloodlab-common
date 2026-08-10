@@ -21,7 +21,6 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.38.0"
 )
 
-// TODO: mabye place it somewhere else
 const ContextKeyCorrelation = "correlation_id"
 
 type correlationIDHook struct{}
