@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.2.0] - 2026-08-10
+
+### Added
+- Extendable base Configuration struct and interface
+  - Configuration reading
+  - String log level and it's processing
+- Universal configurable and extendable startup sequence to eliminate boilerplate reuse
+  - Usable both in core services and drivers
+  - Includes
+    - .env read
+    - configuration read
+    - logger setup
+    - db connection
+    - redis
+    - otel metrics
+    - graceful shutdown
+- Redis cache key formatting functions
+
+### Changed
+- Redis cache creation extended with both app and cache name to avoid collisions
+
 ## [1.1.4] - 2026-03-09
 
 ### Changed

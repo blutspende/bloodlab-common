@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
@@ -36,7 +37,7 @@ func TestPostgresConnection(t *testing.T) {
 	assert.NotNil(t, redisClient)
 
 	// Create and init redis cache
-	cache := NewRedisCache(redisClient, "test")
+	cache := NewRedisCache(redisClient, "testApp", "testCache")
 	redisConfig := RedisCacheConfig{
 		RefreshRetryAttempts:     2,
 		RefreshRetryWaitStartMs:  10,
@@ -76,4 +77,15 @@ func TestPostgresConnection(t *testing.T) {
 	assert.Nil(t, err)
 	err = cache.Read(ctx, cache.KeyForCustom("json"), &testValueRead)
 	assert.ErrorIs(t, err, ErrItemNotFound)
+}
+
+func TestGuidToKey(t *testing.T) {
+	guid := uuid.MustParse("dbe6f55e-2dea-42d9-a9ae-8ae037594cf0")
+	key := GuidToKey(guid)
+	assert.Equal(t, "dbe6f55e_2dea_42d9_a9ae_8ae037594cf0", key)
+}
+
+func TestNameToKey(t *testing.T) {
+	key := NameToKey("NON standard-Name With% 1")
+	assert.Equal(t, "NON_standard_Name_With_1", key)
 }

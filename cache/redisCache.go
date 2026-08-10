@@ -8,6 +8,7 @@ import (
 	"math"
 	"math/rand"
 	"reflect"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -55,8 +56,6 @@ type RedisCache interface {
 	KeyForCustom(customKey string) string
 	KeyForValuedCustom(name string, values ...string) string
 	KeyForNotFound() string
-	// Helper functions
-	GuidToString(id uuid.UUID) string
 }
 
 type redisCache struct {
@@ -71,10 +70,10 @@ type redisCache struct {
 	refreshInitFunc      func(ctx context.Context) error
 }
 
-func NewRedisCache(redisClient *redis.Client, name string) RedisCache {
+func NewRedisCache(redisClient *redis.Client, appName, cacheName string) RedisCache {
 	return &redisCache{
 		redisClient:          redisClient,
-		name:                 name,
+		name:                 fmt.Sprintf("%s:%s", NameToKey(appName), NameToKey(cacheName)),
 		refreshMutex:         &sync.Mutex{},
 		rnd:                  *rand.New(rand.NewSource(time.Now().UnixNano())),
 		cacheValid:           false,
@@ -717,7 +716,7 @@ func (c *redisCache) KeyForAll() string {
 	return fmt.Sprintf("%s:ALL", c.name)
 }
 func (c *redisCache) KeyForOne(id uuid.UUID) string {
-	return fmt.Sprintf("%s:ONE:%s", c.name, c.GuidToString(id))
+	return fmt.Sprintf("%s:ONE:%s", c.name, GuidToKey(id))
 }
 func (c *redisCache) KeyForPage(page pagination.PaginatedQuery) string {
 	return fmt.Sprintf("%s:PAGE:%d|%d|%s|%s", c.name, page.PageSize, page.Page, page.Direction, page.Sort)
@@ -740,9 +739,28 @@ func (c *redisCache) keyForSystem(key string) string {
 
 // Helper functions
 
-func (c *redisCache) GuidToString(id uuid.UUID) string {
-	return strings.ReplaceAll(id.String(), "-", "_")
+func GuidToKey(id uuid.UUID) string {
+	return normalizeKey(id.String())
 }
+func NameToKey(name string) string {
+	return normalizeKey(name)
+}
+func normalizeKey(s string) string {
+	s = strings.TrimSpace(s)
+	replacer := strings.NewReplacer(
+		" ", "_",
+		"-", "_",
+		"/", "_",
+		"\\", "_",
+		".", "_",
+	)
+	s = replacer.Replace(s)
+	re := regexp.MustCompile(`[^a-zA-Z0-9_]`)
+	s = re.ReplaceAllString(s, "")
+	return s
+}
+
+// Internal helper functions
 
 func (c *redisCache) fmtMsg(message string) string {
 	return fmt.Sprintf("redisCache / %s: %s", c.name, message)

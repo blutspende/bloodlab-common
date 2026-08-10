@@ -12,10 +12,11 @@ Contains the `RedisCache` class for easy interaction with Redis. It is a fully i
 ### New
 A new instance can be created calling `NewRedisCache`:
 ```go
-func NewRedisCache(redisClient *redis.Client, name string) RedisCache
+func NewRedisCache(redisClient *redis.Client, appName, cacheName string) RedisCache
 ```
-It requires a pre-configured `*redis.Client` from the `github.com/redis/go-redis/v9` package, and a name for the cache instance.
-It is important that the name is unique for each service instantiating RedisCache, as it is used as a prefix for all keys stored in the cache.
+It requires a pre-configured `*redis.Client` from the `github.com/redis/go-redis/v9` package, and the application name and a name of the cache instance.
+It is important that the names are unique for each service instantiating RedisCache to avoid collisions, as it is used as a combination `appName:cacheName` to prefix all keys stored in the cache.
+Avoid using spaces or underscores in the names, as they are not allowed in Redis keys. Dashes are allowed.
 
 ### Init
 After creating the `Init` method should be called to initialize the cache.
@@ -94,9 +95,34 @@ KeyForCustom(customKey string) string
 KeyForValuedCustom(name string, values ...string) string
 KeyForNotFound() string
 ```
-Additionally, there is a helper function for custom keys involving UUIDs. It is important to use it because regular UUID to string conversion uses dashes, which are not allowed in Redis keys.
+
+### Helper functions
+Additional helper functions are provided for key formatting. It is ill-advised in Redis to use dashes `-`, spaces and special characters in keys. It should also be all lower case as per convention. UUIDs naturally have dashes, so they should be reformatted. Application and cache names should also be normalized. For this these two helper functions are provided, and they should be used whenever a name is not made sure to be compliant as is.
 ```go
-GuidToString(id uuid.UUID) string
+GuidToKey(id uuid.UUID) string
+NameToKey(name string) string
+```
+
+# Config
+`github.com/blutspende/bloodlab-common/config`
+
+Contains a base `CommonConfiguration` struct that can be embedded in other configuration structs to provide common configuration values, and a `ReadConfiguration` function to read environment variables and do basic common processing.
+
+It also contains a `Configuration` interface that should be implemented by any service specific configuration struct to be usable in `ReadConfiguration` and in various things from the `startup` package.
+
+Here is an example of a service specific configuration struct:
+```go
+import commonconfig "github.com/blutspende/bloodlab-common/config"
+
+type Configuration struct {
+    commonconfig.CommonConfiguration
+	
+    ServiceSpecific string `envconfig:"SERVICE_SPECIFIC" required:"true"`
+}
+
+func (c *Configuration) GetCommonConfig() *commonconfig.CommonConfiguration {
+    return &c.CommonConfiguration
+}
 ```
 
 # Db
@@ -159,6 +185,14 @@ Contains common enum and type definitions related to instruments.
 Contains pagination related structs, helpers, and constants.
 `TotalPages` should always be used to calculate total pages based on total items and page size to make sure consistent behavior.
 `StandardisePaginatedQuery` should be used to standardize pagination values. It makes sure that page size is one of the allowed sizes, and page number is not negative. `StandardPageSizes` and `ValidPageSizes` can also be used for validation.
+
+# Startup
+`github.com/blutspende/bloodlab-common/startup`
+Contains startup related structs, helpers, and can be used to handle the startup and shutdown of a service.
+It is a fully configurable drop-in replacement for most of the boilerplate code in the `main()` function. It handles .env and configuration reading, database connection, initializations, and graceful shutdown.
+
+It can be configured using the `startup.Config` struct, and used with the `startup.Startup(cfg)` method. The configuration allows for optional injection of custom initialization and shutdown functions.
+
 
 # Timezone
 `github.com/blutspende/bloodlab-common/timezone`
