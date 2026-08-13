@@ -26,11 +26,10 @@ type CommonConfiguration struct {
 		SSLMode            string `envconfig:"DB_SSL_MODE" required:"true"`
 		EnableQueryLogging bool   `envconfig:"DB_QUERY_LOGGING" default:"false"`
 		// Extended settings
-		MaxOpenConnections           int  `envconfig:"DB_MAX_OPEN_CONNECTIONS" default:"8"`
-		MaxIdleConnections           int  `envconfig:"DB_MAX_IDLE_CONNECTIONS" default:"8"`
-		ConnectionMaxLifetimeSeconds int  `envconfig:"DB_CONNECTION_MAX_LIFETIME_SECONDS" default:"180"`
-		ConnectionMaxIdleTimeSeconds int  `envconfig:"DB_CONNECTION_MAX_IDLE_TIME_SECONDS" default:"30"`
-		UseOpenTelemetry             bool `envconfig:"DB_USE_OTEL" default:"false"`
+		MaxOpenConnections           int `envconfig:"DB_MAX_OPEN_CONNECTIONS" default:"8"`
+		MaxIdleConnections           int `envconfig:"DB_MAX_IDLE_CONNECTIONS" default:"8"`
+		ConnectionMaxLifetimeSeconds int `envconfig:"DB_CONNECTION_MAX_LIFETIME_SECONDS" default:"180"`
+		ConnectionMaxIdleTimeSeconds int `envconfig:"DB_CONNECTION_MAX_IDLE_TIME_SECONDS" default:"30"`
 	}
 
 	LogLevel     string `envconfig:"LOG_LEVEL" default:"INFO"`
