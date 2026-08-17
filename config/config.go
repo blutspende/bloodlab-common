@@ -1,7 +1,6 @@
 package config
 
 import (
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"strings"
@@ -16,6 +15,9 @@ var ErrInvalidLogLevel = errors.New("invalid log level")
 
 type CommonConfiguration struct {
 	ApplicationName string `envconfig:"APPLICATION_NAME" required:"true"`
+
+	LogLevel     string `envconfig:"LOG_LEVEL" default:"INFO"`
+	ZeroLogLevel zerolog.Level
 
 	PostgresDB struct {
 		Host               string `envconfig:"DB_SERVER" required:"true"`
@@ -32,12 +34,11 @@ type CommonConfiguration struct {
 		ConnectionMaxIdleTimeSeconds int `envconfig:"DB_CONNECTION_MAX_IDLE_TIME_SECONDS" default:"30"`
 	}
 
-	LogLevel     string `envconfig:"LOG_LEVEL" default:"INFO"`
-	ZeroLogLevel zerolog.Level
-
-	ClientID                        string `envconfig:"CLIENT_ID" required:"true"`
-	ClientSecret                    string `envconfig:"CLIENT_SECRET" required:"true"`
-	ClientCredentialAuthHeaderValue string
+	OIDC struct {
+		BaseURL      string `envconfig:"OIDC_BASE_URL" required:"false"`
+		ClientID     string `envconfig:"OIDC_CLIENT_ID" required:"false"`
+		ClientSecret string `envconfig:"OIDC_CLIENT_SECRET" required:"false"`
+	}
 
 	Redis struct {
 		Enable                   bool   `envconfig:"REDIS_ENABLE" default:"false"`
@@ -89,8 +90,6 @@ func ReadConfiguration(configuration Configuration) error {
 		return fmt.Errorf("%w: %w", ErrFailedToParseLogLevel, err)
 	}
 	commonConfig.ZeroLogLevel = zeroLogLevel
-
-	commonConfig.ClientCredentialAuthHeaderValue = base64.StdEncoding.EncodeToString([]byte(commonConfig.ClientID + ":" + commonConfig.ClientSecret))
 
 	return nil
 }
