@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.2.1] - 2026-08-18
+
+### Changed
+- pgx changed from v4 to v5
+  - pg error handling adjusted
+- Startup sequence changed to internal error handling
+- OIDC config cleaned up
+
 ## [1.2.0] - 2026-08-10
 
 ### Added
