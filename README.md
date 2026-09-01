@@ -1,7 +1,7 @@
 ## DEPRECATED
 This library is deprecated and will not be updated. It is replaced by multiple independent libraries.
 
-Use `github.com/blutspende/libs/[PACKAGE_NAME]` libraries instead, with the `[PACKAGE_NAME]` substituted with the selected package name from this library.
+Use `github.com/blutspende/libs-[PACKAGE_NAME]` libraries instead, with the `[PACKAGE_NAME]` substituted with the selected package name from this library.
 Except for the `config` which is merged into the `startup` package.
 
 # bloodlab-common
