@@ -36,12 +36,12 @@ func configureLogger(configuration *config.CommonConfiguration, utc bool, hook z
 	zerolog.SetGlobalLevel(logLevel)
 
 	if utc {
-		zerolog.TimeFieldFormat = "2006-01-02T15:04:05.999999Z"
+		zerolog.TimeFieldFormat = "2006-01-02T15:04:05.999Z"
 		zerolog.TimestampFunc = func() time.Time {
 			return time.Now().UTC()
 		}
 	} else {
-		zerolog.TimeFieldFormat = "2006-01-02T15:04:05Z07:00"
+		zerolog.TimeFieldFormat = "2006-01-02T15:04:05.999Z07:00"
 		zerolog.TimestampFunc = func() time.Time {
 			return time.Now()
 		}

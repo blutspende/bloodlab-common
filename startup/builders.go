@@ -30,7 +30,7 @@ func buildPostgres(commonConfig *config.CommonConfiguration, extendedConfig bool
 		dbConfig.MaxIdleConnections = new(commonConfig.PostgresDB.MaxIdleConnections)
 		dbConfig.ConnectionMaxLifetimeSeconds = new(commonConfig.PostgresDB.ConnectionMaxLifetimeSeconds)
 		dbConfig.ConnectionMaxIdleTimeSeconds = new(commonConfig.PostgresDB.ConnectionMaxIdleTimeSeconds)
-		dbConfig.UseOpenTelemetry = commonConfig.PostgresDB.UseOpenTelemetry
+		dbConfig.UseOpenTelemetry = commonConfig.OpenTelemetry.Enable
 	}
 
 	postgres = db.NewPostgres(dbConfig)

@@ -3,7 +3,7 @@ package db
 import (
 	"errors"
 
-	"github.com/jackc/pgconn"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/lib/pq"
 )
 
@@ -21,28 +21,23 @@ var (
 	ErrNoPgConnection             = errors.New("postgres connection is not established")
 )
 
-func IsErrorCode(err error, errcode pq.ErrorCode) bool {
-	pgErr, ok := err.(*pq.Error)
+func IsErrorCode(err error, errCode pq.ErrorCode) bool {
+	var pgxErr *pgconn.PgError
+	ok := errors.As(err, &pgxErr)
 	if ok {
-		return pgErr.Code == errcode
+		return pq.ErrorCode(pgxErr.Code) == errCode
 	}
-
-	pgxErr, ok := err.(*pgconn.PgError)
-	if ok {
-		currentCode := pq.ErrorCode(pgxErr.Code)
-		return currentCode == errcode
-	}
-
 	return false
 }
 
 func TryCastErrorToPgError(err error) any {
-	pgErr, ok := err.(*pq.Error)
-	if ok {
-		return pgErr
+	if err == nil {
+		return nil
 	}
-	pgxErr, ok := err.(*pgconn.PgError)
-	if ok {
+	if pqErr, ok := errors.AsType[*pq.Error](err); ok {
+		return pqErr
+	}
+	if pgxErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 		return pgxErr
 	}
 	return err.Error()

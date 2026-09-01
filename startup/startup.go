@@ -2,6 +2,7 @@ package startup
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/blutspende/bloodlab-common/config"
 	"github.com/blutspende/bloodlab-common/db"
@@ -27,17 +28,17 @@ type Config struct {
 }
 
 func Startup(cfg Config) (ctx context.Context, dbConn db.DbConnection,
-	redisClient *redis.Client, err error) {
+	redisClient *redis.Client) {
 	// .env
-	err = loadDotEnvFile()
+	err := loadDotEnvFile()
 	if err != nil {
-		return
+		startupPanic(err)
 	}
 
 	// Configuration
 	err = config.ReadConfiguration(cfg.Configuration)
 	if err != nil {
-		return
+		startupPanic(err)
 	}
 	commonConfig := cfg.Configuration.GetCommonConfig()
 
@@ -79,7 +80,7 @@ func Startup(cfg Config) (ctx context.Context, dbConn db.DbConnection,
 	if cfg.StartupExtensionFunc != nil {
 		err = cfg.StartupExtensionFunc(cfg.Configuration)
 		if err != nil {
-			return
+			startupPanic(err)
 		}
 	}
 
@@ -88,4 +89,8 @@ func Startup(cfg Config) (ctx context.Context, dbConn db.DbConnection,
 
 	// Return everything
 	return
+}
+
+func startupPanic(err error) {
+	panic(fmt.Errorf("startup failed: %w", err))
 }

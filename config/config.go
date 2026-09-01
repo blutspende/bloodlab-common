@@ -1,7 +1,6 @@
 package config
 
 import (
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"strings"
@@ -17,6 +16,9 @@ var ErrInvalidLogLevel = errors.New("invalid log level")
 type CommonConfiguration struct {
 	ApplicationName string `envconfig:"APPLICATION_NAME" required:"true"`
 
+	LogLevel     string `envconfig:"LOG_LEVEL" default:"INFO"`
+	ZeroLogLevel zerolog.Level
+
 	PostgresDB struct {
 		Host               string `envconfig:"DB_SERVER" required:"true"`
 		Port               uint32 `envconfig:"DB_PORT" required:"true"`
@@ -26,19 +28,17 @@ type CommonConfiguration struct {
 		SSLMode            string `envconfig:"DB_SSL_MODE" required:"true"`
 		EnableQueryLogging bool   `envconfig:"DB_QUERY_LOGGING" default:"false"`
 		// Extended settings
-		MaxOpenConnections           int  `envconfig:"DB_MAX_OPEN_CONNECTIONS" default:"8"`
-		MaxIdleConnections           int  `envconfig:"DB_MAX_IDLE_CONNECTIONS" default:"8"`
-		ConnectionMaxLifetimeSeconds int  `envconfig:"DB_CONNECTION_MAX_LIFETIME_SECONDS" default:"180"`
-		ConnectionMaxIdleTimeSeconds int  `envconfig:"DB_CONNECTION_MAX_IDLE_TIME_SECONDS" default:"30"`
-		UseOpenTelemetry             bool `envconfig:"DB_USE_OTEL" default:"false"`
+		MaxOpenConnections           int `envconfig:"DB_MAX_OPEN_CONNECTIONS" default:"8"`
+		MaxIdleConnections           int `envconfig:"DB_MAX_IDLE_CONNECTIONS" default:"8"`
+		ConnectionMaxLifetimeSeconds int `envconfig:"DB_CONNECTION_MAX_LIFETIME_SECONDS" default:"180"`
+		ConnectionMaxIdleTimeSeconds int `envconfig:"DB_CONNECTION_MAX_IDLE_TIME_SECONDS" default:"30"`
 	}
 
-	LogLevel     string `envconfig:"LOG_LEVEL" default:"INFO"`
-	ZeroLogLevel zerolog.Level
-
-	ClientID                        string `envconfig:"CLIENT_ID" required:"true"`
-	ClientSecret                    string `envconfig:"CLIENT_SECRET" required:"true"`
-	ClientCredentialAuthHeaderValue string
+	OIDC struct {
+		BaseURL      string `envconfig:"OIDC_BASE_URL" required:"false"`
+		ClientID     string `envconfig:"OIDC_CLIENT_ID" required:"false"`
+		ClientSecret string `envconfig:"OIDC_CLIENT_SECRET" required:"false"`
+	}
 
 	Redis struct {
 		Enable                   bool   `envconfig:"REDIS_ENABLE" default:"false"`
@@ -90,8 +90,6 @@ func ReadConfiguration(configuration Configuration) error {
 		return fmt.Errorf("%w: %w", ErrFailedToParseLogLevel, err)
 	}
 	commonConfig.ZeroLogLevel = zeroLogLevel
-
-	commonConfig.ClientCredentialAuthHeaderValue = base64.StdEncoding.EncodeToString([]byte(commonConfig.ClientID + ":" + commonConfig.ClientSecret))
 
 	return nil
 }
